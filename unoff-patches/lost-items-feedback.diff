@@ -1,0 +1,183 @@
+--- moria-5.5.2.orig/source/externs.h	Fri Jul 22 03:47:20 1994
++++ moria-5.5.2/source/externs.h	Sun Feb  3 15:00:00 2002
+@@ -461,7 +461,7 @@
+ void inven_destroy(int);
+ void take_one_item(struct inven_type *, struct inven_type *);
+ void inven_drop(int, int);
+-int inven_damage(int (*)(), int);
++int inven_damage(int (*)(), int, char *);
+ int weight_limit(void);
+ int inven_check_num(struct inven_type *);
+ int inven_check_weight(struct inven_type *);
+--- moria-5.5.2.orig/source/creature.c	Fri Jul 22 03:47:15 1994
++++ moria-5.5.2/source/creature.c	Sun Feb  3 15:00:00 2002
+@@ -340,6 +340,8 @@
+   int32 gold;
+   int8u *attstr;
+   vtype cdesc, tmp_str, ddesc;
++  bigvtype long_desc, long_msg;
++  inven_type lost_obj;
+   register creature_type *r_ptr;
+   monster_type *m_ptr;
+   register struct misc *p_ptr;
+@@ -702,6 +704,8 @@
+ 		  else
+ 		    p_ptr->au -= gold;
+ 		  msg_print("Your purse feels lighter.");
++		  (void) sprintf(tmp_str, "You lost %ld gold!", gold);
++		  msg_print(tmp_str);
+ 		  prt_gold();
+ 		}
+ 	      if (randint(2) == 1)
+@@ -717,8 +721,13 @@
+ 	      else
+ 		{
+ 		  i = randint(inven_ctr) - 1;
++		  take_one_item(&lost_obj, &inventory[i]);
++		  objdes(long_desc, &lost_obj, TRUE);
+ 		  inven_destroy(i);
+ 		  msg_print("Your backpack feels lighter.");
++		  (void) sprintf(long_msg, "You lost %s", long_desc);
++		  long_msg[strlen(long_msg)-1] = '!';
++		  msg_print(long_msg);
+ 		}
+ 	      if (randint(2) == 1)
+ 		{
+@@ -821,6 +830,9 @@
+ 	      if (flag)
+ 		{
+ 		  msg_print("There is a static feeling in the air.");
++		  objdes(long_desc, i_ptr, FALSE);
++		  (void) sprintf(long_msg, "Your %s was disenchanted!", long_desc);
++		  msg_print(long_msg);
+ 		  calc_bonuses ();
+ 		}
+ 	      else
+--- moria-5.5.2.orig/source/misc3.c	Fri Jul 22 03:47:30 1994
++++ moria-5.5.2/source/misc3.c	Sun Feb  3 15:00:00 2002
+@@ -1296,18 +1296,32 @@
+ 
+ 
+ /* Destroys a type of item on a given percent chance	-RAK-	*/
+-int inven_damage(typ, perc)
++int inven_damage(typ, perc, msg)
+ int (*typ)();
+ register int perc;
++char *msg;
+ {
+-  register int i, j;
++  register int i, j, old_ctr;
++  inven_type lost_obj;
++  bigvtype long_desc, long_msg;
+ 
+   j = 0;
+   for (i = 0; i < inven_ctr; i++)
+     if ((*typ)(&inventory[i]) && (randint(100) < perc))
+       {
++	take_one_item(&lost_obj, &inventory[i]);
++	objdes(long_desc, &lost_obj, TRUE);
++	old_ctr = inven_ctr;
+ 	inven_destroy(i);
+ 	j++;
++	if (j == 1)
++	  msg_print(msg);
++	(void) sprintf(long_msg, "You lost %s", long_desc);
++	long_msg[strlen(long_msg)-1] = '!';
++	msg_print(long_msg);
++	if (old_ctr > inven_ctr)
++          /* Compensate for inventory being reindexed by inven_destroy() */
++	  i--;
+       }
+   return(j);
+ }
+--- moria-5.5.2.orig/source/moria2.c	Fri Jul 22 03:47:34 1994
++++ moria-5.5.2/source/moria2.c	Sun Feb  3 15:00:00 2002
+@@ -623,6 +623,7 @@
+ void corrode_gas(kb_str)
+ char *kb_str;
+ {
++  char *msg;
+ #ifdef ATARIST_MWC
+   int32u holder;
+ #endif
+@@ -633,8 +634,8 @@
+   if (!minus_ac((int32u) TR_RES_ACID))
+ #endif
+     take_hit(randint(8), kb_str);
+-  if (inven_damage(set_corrodes, 5) > 0)
+-    msg_print("There is an acrid smell coming from your pack.");
++  msg = "There is an acrid smell coming from your pack.";
++  (void) inven_damage(set_corrodes, 5, msg);
+ }
+ 
+ 
+@@ -653,13 +654,15 @@
+ int dam;
+ char *kb_str;
+ {
++  char *msg;
++
+   if (py.flags.fire_resist)
+     dam = dam / 3;
+   if (py.flags.resist_heat > 0)
+     dam = dam / 3;
+   take_hit(dam, kb_str);
+-  if (inven_damage(set_flammable, 3) > 0)
+-    msg_print("There is smoke coming from your pack!");
++  msg = "There is smoke coming from your pack!";
++  (void) inven_damage(set_flammable, 3, msg);
+ }
+ 
+ 
+@@ -668,13 +671,15 @@
+ int dam;
+ char *kb_str;
+ {
++  char *msg;
++
+   if (py.flags.cold_resist)
+     dam = dam / 3;
+   if (py.flags.resist_cold > 0)
+     dam = dam / 3;
+   take_hit(dam, kb_str);
+-  if (inven_damage(set_frost_destroy, 5) > 0)
+-    msg_print("Something shatters inside your pack!");
++  msg = "Something shatters inside your pack!";
++  (void) inven_damage(set_frost_destroy, 5, msg);
+ }
+ 
+ 
+@@ -683,12 +688,14 @@
+ int dam;
+ char *kb_str;
+ {
++  char *msg;
++
+   if (py.flags.lght_resist)
+     take_hit((dam / 3), kb_str);
+   else
+     take_hit(dam, kb_str);
+-  if (inven_damage(set_lightning_destroy, 3) > 0)
+-    msg_print("There are sparks coming from your pack!");
++  msg = "There are sparks coming from your pack!";
++  (void) inven_damage(set_lightning_destroy, 3, msg);
+ }
+ 
+ 
+@@ -698,6 +705,7 @@
+ char *kb_str;
+ {
+   register int flag;
++  char *msg;
+ #ifdef ATARIST_MWC
+   int32u holder;
+ #endif
+@@ -712,6 +720,6 @@
+   if (py.flags.acid_resist)
+     flag += 2;
+   take_hit (dam / (flag + 1), kb_str);
+-  if (inven_damage(set_acid_affect, 3) > 0)
+-    msg_print("There is an acrid smell coming from your pack!");
++  msg = "There is an acrid smell coming from your pack!";
++  (void) inven_damage(set_acid_affect, 3, msg);
+ }

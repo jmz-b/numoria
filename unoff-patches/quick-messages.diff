@@ -1,0 +1,92 @@
+--- moria-5.5.2.temp/doc/moria1.ms	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/doc/moria1.ms	Thu Dec 30 20:47:57 2004
+@@ -1172,6 +1172,9 @@
+ disabled at the cost of a 10 percent tax on the final price on items you
+ would otherwise have had to haggle for, and all prices displayed in
+ the stores will be the actual prices you have to pay.
++.IP " (13)"
++Activate quick messages.  This is off by default.  When on, the direction
++keys may be used to clear a \*Q\-more\-\*U prompt.
+ .IP
+ The setting of all these options persist in your savefile, even after you
+ die.
+--- moria-5.5.2.temp/doc/moria2.txt	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/doc/moria2.txt	Thu Dec 30 19:47:11 2004
+@@ -371,6 +371,9 @@
+                haggle for,  and all prices displayed  in the stores will be
+                the actual prices you have to pay.
+ 
++           (13)Activate quick messages.  This is off  by default.  When on,
++               the direction keys may be used to clear a "-more-" prompt.
++
+                The setting of all these options persist in  your  savefile,
+                even after you die.
+ 
+--- moria-5.5.2.temp/source/externs.h	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/source/externs.h	Thu Dec 30 20:57:21 2004
+@@ -63,6 +63,7 @@
+ extern int sound_beep_flag;		/* Beep for invalid character */
+ extern int display_counts;		/* Display rest/repeat counts */
+ extern int auto_haggle;			/* Disable haggling in stores */
++extern int quick_messages;	/* Direction keys clear the -more- prompt */
+ 
+ /* global flags */
+ extern int new_level_flag;	  /* Next level when true  */
+--- moria-5.5.2.temp/source/io.c	Fri Jul 22 03:47:26 1994
++++ moria-5.5.2/source/io.c	Thu Dec 30 16:58:04 2004
+@@ -1262,8 +1262,11 @@
+ 	    {
+ 	      in_char = inkey();
+ 	    }
+-	  while ((in_char != ' ') && (in_char != ESCAPE) && (in_char != '\n')
+-		 && (in_char != '\r'));
++	  while (!(quick_messages
++		   && (rogue_like_commands ? index("bjnhlyku", in_char)
++					   : index("12346789", in_char)))
++		 && (in_char != ' ') && (in_char != ESCAPE)
++		 && (in_char != '\n') && (in_char != '\r'));
+ 	  wait_for_more = 0;
+ 	}
+       else
+--- moria-5.5.2.temp/source/misc2.c	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/source/misc2.c	Thu Dec 30 15:11:16 2004
+@@ -1027,6 +1027,7 @@
+   { "Beep for invalid character",		&sound_beep_flag },
+   { "Display rest/repeat counts",		&display_counts },
+   { "Disable haggling",				&auto_haggle },
++  { "Activate quick messages",			&quick_messages },
+   { 0, 0 } };
+ 
+ 
+--- moria-5.5.2.temp/source/save.c	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/source/save.c	Thu Dec 30 15:14:53 2004
+@@ -170,6 +170,8 @@
+     l |= 0x400;
+   if (auto_haggle)
+     l |= 0x800;
++  if (quick_messages)
++    l |= 0x1000;
+   if (death)
+     l |= 0x80000000L;	/* Sign bit */
+   if (total_winner)
+@@ -865,6 +867,10 @@
+ 	auto_haggle = TRUE;
+       else
+ 	auto_haggle = FALSE;
++      if (l & 0x1000)
++	quick_messages = TRUE;
++      else
++	quick_messages = FALSE;
+ 
+       /* Don't allow resurrection of total_winner characters.  It causes
+ 	 problems because the character level is out of the allowed range.  */
+--- moria-5.5.2.temp/source/variable.c	Thu Dec 30 14:51:17 2004
++++ moria-5.5.2/source/variable.c	Thu Dec 30 15:15:56 2004
+@@ -65,6 +65,7 @@
+ int sound_beep_flag = TRUE;
+ int display_counts = TRUE;
+ int auto_haggle = FALSE;
++int quick_messages = FALSE;
+ 
+ char doing_inven = FALSE;	/* Track inventory commands. -CJS- */
+ int screen_change = FALSE;	/* Track screen updates for inven_commands. */

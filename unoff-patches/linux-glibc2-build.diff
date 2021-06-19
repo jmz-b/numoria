@@ -1,0 +1,257 @@
+--- moria-5.5.2.orig/source/config.h	1994-07-22 03:47:13.000000000 +0200
++++ moria-5.5.2/source/config.h	2006-12-30 21:16:27.029421960 +0100
+@@ -198,6 +198,18 @@
+ 
+ #else
+ 
++#ifdef __linux__
++#define MORIA_SAV	"moria.save"
++#define MORIA_MOR       DATADIR"/news"
++#define MORIA_HELP      DATADIR"/roglcmds.hlp"
++#define MORIA_ORIG_HELP DATADIR"/origcmds.hlp"
++#define MORIA_WIZ_HELP  DATADIR"/rwizcmds.hlp"
++#define MORIA_OWIZ_HELP DATADIR"/owizcmds.hlp"
++#define MORIA_WELCOME   DATADIR"/welcome.hlp"
++#define MORIA_VER       DATADIR"/version.hlp"
++#define MORIA_TOP       SCOREDIR"/scores"
++#define MORIA_HOU       CONFIGDIR"/hours"
++#else
+ /* This must be unix; change MORIA_LIB as appropriate.  */
+ #define MORIA_SAV	"moria.save"
+ #define MORIA_LIB(xxx)  "/home/math/grabiner/moria/files/xxx"
+@@ -210,6 +222,7 @@
+ #define MORIA_OWIZ_HELP	MORIA_LIB(owizcmds.hlp)
+ #define MORIA_WELCOME	MORIA_LIB(welcome.hlp)
+ #define MORIA_VER	MORIA_LIB(version.hlp)
++#endif
+ 
+ #endif
+ #endif
+--- moria-5.5.2.orig/source/death.c	1994-07-22 03:47:16.000000000 +0200
++++ moria-5.5.2/source/death.c	2006-12-30 15:46:50.821862488 +0100
+@@ -175,10 +175,14 @@
+ /* The following code is provided especially for systems which		-CJS-
+    have no flock system call. It has never been tested.		*/
+ 
++#ifndef __linux__
++/* These four are already defined in <bits/fcntl.h>, but with
++   LOCK_EX and LOCK_SH reversed ... */
+ #define LOCK_EX	1
+ #define LOCK_SH	2
+ #define LOCK_NB	4
+ #define LOCK_UN	8
++#endif
+ 
+ /* An flock HACK.  LOCK_SH and LOCK_EX are not distinguished.  DO NOT release
+    a lock which you failed to set!  ALWAYS release a lock you set! */
+--- moria-5.5.2.orig/source/externs.h	1994-07-22 03:47:20.000000000 +0200
++++ moria-5.5.2/source/externs.h	2006-12-28 22:45:14.000000000 +0100
+@@ -330,8 +330,12 @@
+ 
+ /* io.c */
+ #ifdef SIGTSTP
++#ifdef __linux__
++void suspend(void);
++#else
+ int suspend(void);
+ #endif
++#endif
+ void init_curses(void);
+ void moriaterm(void);
+ void put_buffer(char *, int, int);
+@@ -842,8 +846,12 @@
+ 
+ /* io.c */
+ #ifdef SIGTSTP
++#ifdef __linux__
++void suspend();
++#else
+ int suspend();
+ #endif
++#endif
+ void init_curses();
+ void moriaterm();
+ void put_buffer();
+--- moria-5.5.2.orig/source/io.c	1994-07-22 03:47:26.000000000 +0200
++++ moria-5.5.2/source/io.c	2006-12-30 17:45:04.362480400 +0100
+@@ -80,6 +80,9 @@
+ #include <sys/ioctl.h>
+ #endif
+ #include <signal.h>
++#ifdef __linux__
++#include <termios.h>
++#endif
+ #endif
+ #endif
+ 
+@@ -235,11 +238,21 @@
+    Handle the stop and start signals. This ensures that the log
+    is up to date, and that the terminal is fully reset and
+    restored.  */
++#ifdef __linux__
++/* signal() treats suspend as a pointer to a function returning void */
++void suspend()
++#else
+ int suspend()
++#endif
+ {
+ #ifdef USG
+   /* for USG systems with BSDisms that have SIGTSTP defined, but don't
+      actually implement it */
++  /* Linux note: since __linux__ implies SYS_V implies USG (config.h),
++     this is currently a dummy function even though Linux does implement
++     SIGTSTP, which seems a worse approach even than just relying on
++     the default handler, and have the user press ^R to fix the console
++     when a suspended game is placed in the foreground. */
+ #else
+   struct sgttyb tbuf;
+   struct ltchars lcbuf;
+@@ -266,7 +279,9 @@
+   (void) wrefresh(curscr);
+   py.misc.male &= ~2;
+ #endif
++#ifndef __linux__
+   return 0;
++#endif
+ }
+ #endif
+ #endif
+--- moria-5.5.2.orig/source/Makefile.linux	1970-01-01 01:00:00.000000000 +0100
++++ moria-5.5.2/source/Makefile.linux	2006-12-30 21:11:22.639696000 +0100
+@@ -0,0 +1,95 @@
++TOPDIR =
++BINDIR = $(TOPDIR)/usr/games
++DATADIR = $(TOPDIR)/usr/share/games/moria
++SCOREDIR = $(TOPDIR)/var/games/moria
++CONFIGDIR = $(TOPDIR)/etc/moria
++OWNER = root
++GROUP = games
++
++CC = gcc
++# CFLAGS = -O2 -s
++CFLAGS = -g
++
++# DATADIR, SCOREDIR, CONFIGDIR are used also in config.h
++CFLAGS += -DDATADIR=\"$(DATADIR)\" -DSCOREDIR=\"$(SCOREDIR)\" \
++  -DCONFIGDIR=\"$(CONFIGDIR)\"
++
++LIBS = -lncurses
++
++OBJS = create.o creature.o death.o desc.o dungeon.o eat.o \
++  files.o generate.o help.o io.o rnd.o magic.o main.o \
++  misc1.o misc2.o misc3.o misc4.o monsters.o \
++  moria1.o moria2.o moria3.o moria4.o player.o potions.o \
++  prayer.o recall.o save.o scrolls.o sets.o signals.o \
++  spells.o staffs.o store1.o store2.o tables.o treasure.o \
++  unix.o variable.o wands.o wizard.o
++
++DATAFILES = news origcmds.hlp owizcmds.hlp roglcmds.hlp rwizcmds.hlp \
++  version.hlp welcome.hlp
++
++moria: $(OBJS)
++	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
++
++install:
++	mkdir -p $(BINDIR)
++	cp moria $(BINDIR)
++	chmod 2755 $(BINDIR)/moria
++	chown $(OWNER):$(GROUP) $(BINDIR)/moria
++	mkdir -p $(DATADIR)
++	(cd ../files; cp $(DATAFILES) $(DATADIR))
++	(cd $(DATADIR); chmod 444 $(DATAFILES))
++	(cd $(DATADIR); chown $(OWNER):$(GROUP) $(DATAFILES))
++	mkdir -p $(SCOREDIR)
++	touch $(SCOREDIR)/scores
++	chmod 664 $(SCOREDIR)/scores
++	chown $(OWNER):$(GROUP) $(SCOREDIR)/scores
++	mkdir -p $(CONFIGDIR)
++	cp ../files/hours $(CONFIGDIR)
++	chmod 644 $(CONFIGDIR)/hours
++	chown $(OWNER):$(GROUP) $(CONFIGDIR)/hours
++
++# Object file dependencies according to cpp -MM
++create.o: create.c config.h constant.h types.h externs.h
++creature.o: creature.c config.h constant.h types.h externs.h
++death.o: death.c config.h constant.h types.h externs.h
++desc.o: desc.c config.h constant.h types.h externs.h
++dungeon.o: dungeon.c config.h constant.h types.h externs.h
++eat.o: eat.c config.h constant.h types.h externs.h
++files.o: files.c config.h constant.h types.h externs.h
++generate.o: generate.c config.h constant.h types.h externs.h
++help.o: help.c config.h constant.h types.h externs.h
++io.o: io.c config.h constant.h types.h externs.h
++magic.o: magic.c config.h constant.h types.h externs.h
++main.o: main.c config.h constant.h types.h externs.h
++misc1.o: misc1.c config.h constant.h types.h externs.h
++misc2.o: misc2.c config.h constant.h types.h externs.h
++misc3.o: misc3.c config.h constant.h types.h externs.h
++misc4.o: misc4.c config.h constant.h types.h externs.h
++monsters.o: monsters.c config.h constant.h types.h
++moria1.o: moria1.c config.h constant.h types.h externs.h
++moria2.o: moria2.c config.h constant.h types.h externs.h
++moria3.o: moria3.c config.h constant.h types.h externs.h
++moria4.o: moria4.c config.h constant.h types.h externs.h
++player.o: player.c config.h constant.h types.h
++potions.o: potions.c config.h constant.h types.h externs.h
++prayer.o: prayer.c config.h constant.h types.h externs.h
++recall.o: recall.c config.h constant.h types.h externs.h
++rnd.o: rnd.c config.h constant.h types.h
++save.o: save.c config.h constant.h types.h externs.h
++scrolls.o: scrolls.c config.h constant.h types.h externs.h
++sets.o: sets.c config.h constant.h types.h
++signals.o: signals.c config.h constant.h types.h externs.h
++spells.o: spells.c config.h constant.h types.h externs.h
++staffs.o: staffs.c config.h constant.h types.h externs.h
++store1.o: store1.c config.h constant.h types.h externs.h
++store2.o: store2.c config.h constant.h types.h externs.h
++tables.o: tables.c config.h constant.h types.h
++treasure.o: treasure.c config.h constant.h types.h
++variable.o: variable.c config.h constant.h types.h
++wands.o: wands.c config.h constant.h types.h externs.h
++wizard.o: wizard.c config.h constant.h types.h externs.h
++
++# unix.o is a special case
++unix.o: unix.c config.h constant.h types.h externs.h
++unix.c:
++	cp ../unix/unix.c unix.c
+--- moria-5.5.2.orig/source/signals.c	1994-07-22 03:47:42.000000000 +0200
++++ moria-5.5.2/source/signals.c	2006-12-30 20:55:23.598492656 +0100
+@@ -101,7 +101,9 @@
+ 
+   smask = sigsetmask(0) | (1 << sig);
+ #else
+-#if defined(__TURBOC__) || defined(AMIGA)
++#if defined(__TURBOC__) || defined(AMIGA) || defined(__linux__)
++/* Under Linux, signal() treats signal_handler as a pointer to a function
++   returning void. */
+ static void signal_handler(sig)
+ #else
+ static int signal_handler(sig)
+@@ -137,6 +139,15 @@
+ 	      put_qio();
+ 	      error_sig = -1;
+ #ifdef USG
++/* On systems with SysV signal semantics, this call to restore the handler
++   was probably intended to go before the above prompt, to prevent breaking
++   out of get_check().
++   On Linux systems with libc6 (glibc2), which exhibit BSD signal semantics
++   by default, this particular call is redundant, since the handler is not
++   reset to SIG_DFL.  More importantly, no new handler installed for
++   the same signal will take effect until the current handler has finished
++   executing, since new instances of the signal are blocked while
++   the handler executes. */
+ 	      (void) signal(sig, signal_handler);/* Have to restore handler. */
+ #else
+ 	      (void) sigsetmask(smask);
+--- moria-5.5.2.orig/unix/unix.c	1994-07-22 00:37:08.000000000 +0200
++++ moria-5.5.2/unix/unix.c	2006-12-26 00:20:34.000000000 +0100
+@@ -261,7 +261,9 @@
+ #endif
+ 
+ #ifdef USG
++#ifndef __linux__
+ unsigned short getuid();
++#endif
+ #else
+ #ifndef SECURE
+ #ifdef BSD4_3

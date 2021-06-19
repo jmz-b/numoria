@@ -1,0 +1,14 @@
+--- moria-5.5.2.orig/source/creature.c	Fri Jul 22 03:47:15 1994
++++ moria-5.5.2/source/creature.c	Thu May  8 21:00:00 2003
+@@ -829,8 +829,10 @@
+ 	    case 22:	/*Eat food	   */
+ 	      if (find_range(TV_FOOD, TV_NEVER, &i, &j))
+ 		{
+-		  inven_destroy(i);
+ 		  msg_print ("It got at your rations!");
++		  i += randint(j - i + 1) - 1;
++		  desc_remain(i);
++		  inven_destroy(i);
+ 		}
+ 	      else
+ 		notice = FALSE;

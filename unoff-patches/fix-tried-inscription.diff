@@ -1,0 +1,47 @@
+--- moria-5.5.2.orig/source/desc.c	Fri Jul 22 03:47:17 1994
++++ moria-5.5.2/source/desc.c	Thu Nov  8 21:00:00 2001
+@@ -24,12 +24,6 @@
+ #include <strings.h>
+ #endif
+ 
+-#if defined(LINT_ARGS)
+-static void unsample(struct inven_type *);
+-#else
+-static void unsample();
+-#endif
+-
+ #ifdef ATARIST_TC
+ /* Include this to get prototypes for standard library functions.  */
+ #include <stdlib.h>
+@@ -182,7 +176,7 @@
+ void known2(i_ptr)
+ inven_type *i_ptr;
+ {
+-  unsample(i_ptr);
++  i_ptr->ident &= ~(ID_MAGIK|ID_EMPTY);
+   i_ptr->ident |= ID_KNOWN2;
+ }
+ 
+@@ -215,22 +209,6 @@
+ inven_type *i_ptr;
+ {
+   return (i_ptr->ident & ID_STOREBOUGHT);
+-}
+-
+-/*	Remove an automatically generated inscription.	-CJS- */
+-static void unsample(i_ptr)
+-inven_type *i_ptr;
+-{
+-  int16 offset;
+-  int8u indexx;
+-
+-  /* used to clear ID_DAMD flag, but I think it should remain set */
+-  i_ptr->ident &= ~(ID_MAGIK|ID_EMPTY);
+-  if ((offset = object_offset(i_ptr)) < 0)
+-    return;
+-  offset <<= 6;
+-  indexx = i_ptr->subval & (ITEM_SINGLE_STACK_MIN - 1);
+-  object_ident[offset + indexx] &= ~OD_TRIED;
+ }
+ 
+ /* unquote() is no longer needed */

@@ -1,0 +1,101 @@
+--- moria-5.5.2.orig/source/externs.h	Fri Jul 22 03:47:20 1994
++++ moria-5.5.2/source/externs.h	Wed Dec 17 22:41:18 2003
+@@ -594,6 +594,8 @@
+ int32 rnd(void);
+ 
+ /* save.c */
++void demote_mage_books();
++void promote_mage_books();
+ #ifdef MAC
+ int save_char(int);
+ #else
+@@ -1113,6 +1115,8 @@
+ int32 rnd();
+ 
+ /* save.c */
++void demote_mage_books();
++void promote_mage_books();
+ int save_char();
+ int _save_char();
+ int get_char();
+--- moria-5.5.2.orig/source/misc3.c	Fri Jul 22 03:47:30 1994
++++ moria-5.5.2/source/misc3.c	Wed Dec 10 22:56:18 2003
+@@ -1451,7 +1451,14 @@
+ 	 insert them into the inventory in sorted order.  */
+       else if ((typ == t_ptr->tval && subt < t_ptr->subval
+ 		&& always_known1p)
+-	       || (typ > t_ptr->tval))
++	       || ((typ > t_ptr->tval)
++		   ?
++		   (class[py.misc.pclass].spell != MAGE
++		     || t_ptr->tval != TV_MAGIC_BOOK)
++		   :
++		   (class[py.misc.pclass].spell == MAGE
++		     && typ == TV_MAGIC_BOOK
++		     && t_ptr->tval != TV_MAGIC_BOOK)))
+ 	{
+ 	  for (i = inven_ctr - 1; i >= locn; i--)
+ 	    inventory[i+1] = inventory[i];
+--- moria-5.5.2.orig/source/save.c	Fri Jul 22 03:47:40 1994
++++ moria-5.5.2/source/save.c	Wed Dec 17 22:38:01 2003
+@@ -452,6 +452,42 @@
+     return FALSE;
+   return TRUE;
+ }
++ 
++void demote_mage_books()
++{
++  int m1, m2, p1, p2, i, j, k;
++  inven_type tmp;
++  if (find_range(TV_MAGIC_BOOK, TV_NEVER, &m1, &m2))
++    if (find_range(TV_PRAYER_BOOK, TV_NEVER, &p1, &p2))
++      if (m2 < p1)
++	for (i = p1; i <= p2; i++)
++	  {
++	    j = i - (m2 - m1 + 1);
++	    tmp = inventory[j];
++	    inventory[j] = inventory[i];
++	    for (k = i; k > j + 1; k--)
++	      inventory[k] = inventory[k - 1];
++	    inventory[j + 1] = tmp;
++	  }
++}
++
++void promote_mage_books()
++{
++  int p1, p2, m1, m2, i, j, k;
++  inven_type tmp;
++  if (find_range(TV_PRAYER_BOOK, TV_NEVER, &p1, &p2))
++    if (find_range(TV_MAGIC_BOOK, TV_NEVER, &m1, &m2))
++      if (p2 < m1)
++	for (i = m1; i <= m2; i++)
++	  {
++	    j = i - (p2 - p1 + 1);
++	    tmp = inventory[j];
++	    inventory[j] = inventory[i];
++	    for (k = i; k > j + 1; k--)
++	      inventory[k] = inventory[k - 1];
++	    inventory[j + 1] = tmp;
++	  }
++}
+ 
+ #ifdef MAC
+ 
+@@ -557,6 +593,8 @@
+   nosignals();
+   put_qio();
+   disturb (1, 0);		/* Turn off resting and searching. */
++  if (class[py.misc.pclass].spell == MAGE)
++    demote_mage_books();
+   change_speed(-pack_heavy);	/* Fix the speed */
+   pack_heavy = 0;
+   ok = FALSE;
+@@ -1246,6 +1284,8 @@
+ 
+ 	  if (turn >= 0)
+ 	    {	/* Only if a full restoration. */
++	      if (class[py.misc.pclass].spell == MAGE)
++		promote_mage_books();
+ 	      weapon_heavy = FALSE;
+ 	      pack_heavy = 0;
+ 	      check_strength();

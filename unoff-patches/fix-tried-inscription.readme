@@ -1,0 +1,70 @@
+Due to an inconsistency in known2(), the auto-generated 'tried'
+inscription on an item that has been quaffed/read/zapped but not
+immediately identified does not always stick.
+
+Currently, there are two places where the OD_TRIED flag is cleared,
+in known1() and in unsample(), which is called only by known2().
+
+OD_TRIED is a property of a given type of object, as is OD_KNOWN1, and
+known1() and known1_p() deal only with properties of the type as a whole,
+like the fact that it is a 'Wand of Lightning Bolts' but not how many
+charges it holds.
+
+ID_KNOWN2 on the other hand is a property of a particular item of a type.
+Since known2_p() and clear_known2() deal only with individual items,
+it is inconsistent that known2() (through unsample()) should deal with
+properties of both an individual item and of the type as a whole.
+
+During the store maintenance that takes place every 1000 turns while
+the player is in the dungeon (and also when resuming a saved game
+if the savefile is more than a day old), store_maint() calls
+store_create() which calls store_bought() which calls known2(),
+and 'tried' items in the players inventory that match newly created
+store items will have their OD_TRIED flag cleared.
+
+To fix this bug I propose to remove the code in unsample() that clears
+the OD_TRIED flag, and fold the remainder of the function body (one line
+of code) into known2().
+
+To make sure that this does not accidentally introduce a new bug it is
+necessary to look at the other places (other than in store_bought())
+where known2() is called:
+
+print_tomb() of death.c:
+   the call to known2() here immediately follows a call to known1(),
+   so any OD_TRIED flag that was set will already have been cleared.
+search() of moria2.c:
+   when a trap on a chest is discovered by searching.
+openobject() of moria3.c:
+   when a chest is opened.
+disarm_trap() of moria4.c (2 calls):
+   when a trap on a chest is disarmed or is set off, following a 'D'isarm
+   command.
+detect_trap() of spells.c:
+   when a trap on a chest is discovered through area-effect magic.
+ident_spell() of spells.c:
+   the call to known2() here follows a call to identify() which in turn
+   calls known1(), so any OD_TRIED flag that was set will already
+   have been cleared.
+td_destroy() of spells.c:
+   when traps on any adjacent chests are disarmed through magic.
+disarm_all() of spells.c:
+   when traps on one or more chests in a given direction are disarmed
+   by zapping a Wand of Disarming.
+td_destroy2() of spells.c:
+   when traps on one or more chests in a given direction are disarmed
+   by zapping a Wand of Trap/Door Destruction.
+store_sell() of store2.c:
+   the call to known2() here follows a call to identify(), so any
+   OD_TRIED flag that was set will already have been cleared.
+
+In addition, known2() is called indirectly through store_bought() in:
+
+char_inven_init() of main.c
+   which is executed only at the start of a new game, before any items
+   have been tried.
+print_objects() of files.c
+   which is executed in response to a ^O command (Print random objects
+   sample) in wizard mode, and which by the look of it has the same
+   problem as the call in store_create().
+

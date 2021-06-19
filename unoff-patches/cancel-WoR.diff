@@ -1,0 +1,20 @@
+--- moria-5.5.2.orig/source/scrolls.c	Fri Jul 22 03:47:41 1994
++++ moria-5.5.2/source/scrolls.c	Tue Jan 22 21:00:00 2002
+@@ -496,8 +496,15 @@
+ 	    case 41:
+ 	      ident = TRUE;
+ 	      if (py.flags.word_recall == 0)
+-		py.flags.word_recall = 25 + randint(30);
+-	      msg_print("The air about you becomes charged.");
++		{
++		  py.flags.word_recall = 25 + randint(30);
++		  msg_print("The air about you becomes charged.");
++		}
++	      else
++		{
++		  py.flags.word_recall = 0;
++		  msg_print("A tension leaves the air around you.");
++		}
+ 	      break;
+ 	    case 42:
+ 	      destroy_area(char_row, char_col);

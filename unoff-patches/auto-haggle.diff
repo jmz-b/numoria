@@ -1,0 +1,193 @@
+--- moria-5.5.2.orig/doc/moria1.ms	Fri Jul 22 00:36:19 1994
++++ moria-5.5.2/doc/moria1.ms	Tue Aug 27 23:50:05 2002
+@@ -1167,6 +1167,11 @@
+ for repeated commands.  For those trying to play over a 2400 bps or less
+ connection, or for those playing on very slow microcomputers, turning this
+ off will make resting and repeated commands work much faster.
++.IP " (12)"
++Disable haggling.  This is off by default.  When on, all haggling will be
++disabled at the cost of a 10 percent tax on the final price on items you
++would otherwise have had to haggle for, and all prices displayed in
++the stores will be the actual prices you have to pay.
+ .IP
+ The setting of all these options persist in your savefile, even after you
+ die.
+--- moria-5.5.2.orig/doc/moria2.txt	Fri Jul 22 00:36:24 1994
++++ moria-5.5.2/doc/moria2.txt	Sun Jan 20 15:00:00 2002
+@@ -365,6 +365,12 @@
+                off  will  make resting and repeated commands work much fas-
+                ter.
+ 
++           (12)Disable haggling.  This  is  off  by default.  When on,  all
++               haggling  will be disabled  at the cost  of a 10 percent tax
++               on the final price on items you would otherwise  have had to
++               haggle for,  and all prices displayed  in the stores will be
++               the actual prices you have to pay.
++
+                The setting of all these options persist in  your  savefile,
+                even after you die.
+ 
+--- moria-5.5.2.orig/source/constant.h	Fri Jul 22 03:47:14 1994
++++ moria-5.5.2/source/constant.h	Sun Jan 20 15:00:00 2002
+@@ -85,6 +85,7 @@
+ #define STORE_MIN_INVEN	 10   /* Min diff objs in stock for auto sell  */
+ #define STORE_TURN_AROUND 9   /* Amount of buying and selling normally */
+ #define COST_ADJ	 100  /* Adjust prices for buying and selling  */
++#define SALES_TAX	 10   /* Auto-haggle penalty (percent)         */
+ 
+ /* Treasure constants						*/
+ #define INVEN_ARRAY_SIZE 34   /* Size of inventory array(Do not change)*/
+--- moria-5.5.2.orig/source/externs.h	Fri Jul 22 03:47:20 1994
++++ moria-5.5.2/source/externs.h	Sun Jan 20 15:00:00 2002
+@@ -62,6 +62,7 @@
+ extern int find_ignore_doors;		/* Run through open doors */
+ extern int sound_beep_flag;		/* Beep for invalid character */
+ extern int display_counts;		/* Display rest/repeat counts */
++extern int auto_haggle;			/* Disable haggling in stores */
+ 
+ /* global flags */
+ extern int new_level_flag;	  /* Next level when true  */
+--- moria-5.5.2.orig/source/misc2.c	Fri Jul 22 03:47:29 1994
++++ moria-5.5.2/source/misc2.c	Sun Jan 20 15:00:00 2002
+@@ -1026,6 +1026,7 @@
+   { "Highlight and notice mineral seams",	&highlight_seams },
+   { "Beep for invalid character",		&sound_beep_flag },
+   { "Display rest/repeat counts",		&display_counts },
++  { "Disable haggling",				&auto_haggle },
+   { 0, 0 } };
+ 
+ 
+--- moria-5.5.2.orig/source/save.c	Fri Jul 22 03:47:40 1994
++++ moria-5.5.2/source/save.c	Sun Jan 20 15:00:00 2002
+@@ -168,6 +168,8 @@
+     l |= 0x200;
+   if (display_counts)
+     l |= 0x400;
++  if (auto_haggle)
++    l |= 0x800;
+   if (death)
+     l |= 0x80000000L;	/* Sign bit */
+   if (total_winner)
+@@ -859,6 +861,10 @@
+ 	display_counts = TRUE;
+       else
+ 	display_counts = FALSE;
++      if (l & 0x800)
++	auto_haggle = TRUE;
++      else
++	auto_haggle = FALSE;
+ 
+       /* Don't allow resurrection of total_winner characters.  It causes
+ 	 problems because the character level is out of the allowed range.  */
+--- moria-5.5.2.orig/source/store2.c	Fri Jul 22 03:47:46 1994
++++ moria-5.5.2/source/store2.c	Sun Jan 20 15:00:00 2002
+@@ -257,13 +257,35 @@
+       prt(out_val2, i+5, 0);
+       x = s_ptr->store_inven[start].scost;
+       if (x <= 0)
+-	{
+-	  int32 value = -x;
+-	  value = value * chr_adj() / 100;
+-	  if (value <= 0)
+-	    value = 1;
+-	  (void) sprintf(out_val2, "%9ld", value);
+-	}
++	if (!auto_haggle)
++	  {
++	    int32 value = -x;
++	    value = value * chr_adj() / 100;
++	    if (value <= 0)
++	      value = 1;
++	    (void) sprintf(out_val2, "%9ld", value);
++	  }
++	else
++	  {
++	    /* Get the normal haggle asking price and the final price */
++	    int32 start_ask, final_ask;
++	    (void) sell_price(store_num, &start_ask, &final_ask, i_ptr);
++	    start_ask = start_ask * chr_adj() / 100;
++	    if (start_ask <= 0)
++	      start_ask = 1;
++	    final_ask = final_ask * chr_adj() / 100;
++	    if (final_ask <= 0)
++	      final_ask = 1;
++	    if (!noneedtobargain(store_num, final_ask))
++	      {
++		/* Add sales tax to the final price */
++		final_ask = final_ask + (final_ask * SALES_TAX) / 100;
++		/* But don't exceed the normal asking price */
++		if (final_ask > start_ask)
++		  final_ask = start_ask;
++	      }
++	    (void) sprintf(out_val2, "%9ld", final_ask);
++	  }
+       else
+ 	(void) sprintf(out_val2,"%9ld [Fixed]", x);
+       prt(out_val2, i+5, 59);
+@@ -558,6 +580,14 @@
+   if (max_sell <= 0)  max_sell = 1;
+   min_sell = min_sell * chr_adj() / 100;
+   if (min_sell <= 0)  min_sell = 1;
++  if (auto_haggle && !noneedtobargain(store_num, min_sell))
++    {
++      /* Add sales tax to the final price */
++      min_sell = min_sell + (min_sell * SALES_TAX) / 100;
++      /* But don't exceed the normal asking price */
++      if (min_sell > max_sell)
++	min_sell = max_sell;
++    }
+   /* cast max_inflate to signed so that subtraction works correctly */
+   max_buy  = cost * (200 - (int)o_ptr->max_inflate) / 100;
+   if (max_buy <= 0) max_buy = 1;
+@@ -573,7 +603,7 @@
+   comment = "Asking";
+ 
+   /* go right to final price if player has bargained well */
+-  if (noneedtobargain(store_num, final_ask))
++  if (auto_haggle || noneedtobargain(store_num, final_ask))
+     {
+       msg_print("After a long bargaining session, you agree upon the price.");
+       cur_ask = min_sell;
+@@ -732,6 +762,14 @@
+       if (min_buy < 1) min_buy = 1;
+       if (max_buy < 1) max_buy = 1;
+       if (min_buy < max_buy)  min_buy = max_buy;
++      if (auto_haggle && !noneedtobargain(store_num, min_buy))
++	{
++	  /* Subtract sales tax from the final price */
++	  min_buy = min_buy - (min_buy * SALES_TAX) / 100;
++	  /* But don't offer less than opening bid during haggling */
++	  if (min_buy < max_buy)
++	    min_buy = max_buy;
++	}
+       min_per  = o_ptr->haggle_per;
+       max_per  = min_per * 3;
+       max_gold = o_ptr->max_cost;
+@@ -761,7 +799,7 @@
+ 	  comment = "Offer";
+ 
+ 	  /* go right to final price if player has bargained well */
+-          if (noneedtobargain(store_num, final_ask))
++	  if (auto_haggle || noneedtobargain(store_num, final_ask))
+ 	    {
+ 	      msg_print("After a long bargaining session, you agree upon \
+ the price.");
+@@ -946,7 +984,7 @@
+ 		      r_ptr = &s_ptr->store_inven[item_val];
+ 		      if (i == s_ptr->store_ctr)
+ 			{
+-			  if (r_ptr->scost < 0)
++			  if (!auto_haggle && (r_ptr->scost < 0))
+ 			    {
+ 			      r_ptr->scost = price;
+ 			      display_cost(store_num, item_val);
+--- moria-5.5.2.orig/source/variable.c	Fri Jul 22 03:47:49 1994
++++ moria-5.5.2/source/variable.c	Sun Jan 20 15:00:00 2002
+@@ -64,6 +64,7 @@
+ int find_ignore_doors = FALSE;
+ int sound_beep_flag = TRUE;
+ int display_counts = TRUE;
++int auto_haggle = FALSE;
+ 
+ char doing_inven = FALSE;	/* Track inventory commands. -CJS- */
+ int screen_change = FALSE;	/* Track screen updates for inven_commands. */

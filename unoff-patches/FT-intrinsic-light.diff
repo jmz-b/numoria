@@ -1,0 +1,224 @@
+--- moria-5.5.2.orig/source/dungeon.c
++++ moria-5.5.2/source/dungeon.c
+@@ -37,6 +37,7 @@
+ static void go_down(void);
+ static void jamdoor(void);
+ static void refill_lamp(void);
++static int notice_flame_tongue(void);
+ #else
+ static char original_commands();
+ static void do_command();
+@@ -49,6 +50,7 @@
+ static void go_down();
+ static void jamdoor();
+ static void refill_lamp();
++static int notice_flame_tongue();
+ #endif
+ 
+ #ifdef ATARIST_TC
+@@ -65,6 +67,8 @@
+ void dungeon()
+ {
+   int find_count, i;
++  int wielding_flame_tongue;
++  inven_type *w_ptr;
+   int regen_amount;	    /* Regenerate hp and mana*/
+   char command;		/* Last command		 */
+   register struct misc *p_ptr;
+@@ -83,10 +87,16 @@
+ 
+   /* Check light status for setup	   */
+   i_ptr = &inventory[INVEN_LIGHT];
+-  if (i_ptr->p1 > 0)
++  w_ptr = &inventory[INVEN_WIELD];
++  if (w_ptr->tval != TV_NOTHING && (w_ptr->flags & TR_FLAME_TONGUE) != 0)
++    wielding_flame_tongue = TRUE;
++  else
++    wielding_flame_tongue = FALSE;
++  if (i_ptr->p1 > 0 || wielding_flame_tongue)
+     player_light = TRUE;
+   else
+     player_light = FALSE;
++  flame_tongue_check = TRUE;  /* Should really save/restore instead */
+   /* Check for a maximum level		   */
+   if (dun_level > p_ptr->max_dlv)
+     p_ptr->max_dlv = dun_level;
+@@ -157,17 +167,32 @@
+ 	alloc_monster(1, MAX_SIGHT, FALSE);
+       /* Check light status			       */
+       i_ptr = &inventory[INVEN_LIGHT];
++      w_ptr = &inventory[INVEN_WIELD];
++      if (w_ptr->tval != TV_NOTHING && (w_ptr->flags & TR_FLAME_TONGUE) != 0)
++	wielding_flame_tongue = TRUE;
++      else
++	wielding_flame_tongue = FALSE;
+       if (player_light)
+ 	if (i_ptr->p1 > 0)
+ 	  {
++	    flame_tongue_check = TRUE;
+ 	    i_ptr->p1--;
+ 	    if (i_ptr->p1 == 0)
+ 	      {
+-		player_light = FALSE;
+ 		msg_print("Your light has gone out!");
+-		disturb (0, 1);
+-		/* unlight creatures */
+-		creatures(FALSE);
++		if (wielding_flame_tongue)
++		  {
++		    light_drew_map = FALSE;
++		    if (!known2_p(w_ptr))
++		      flame_tongue_check = (!notice_flame_tongue());
++		  }
++		else
++		  {
++		    player_light = FALSE;
++		    disturb (0, 1);
++		    /* unlight creatures */
++		    creatures(FALSE);
++		  }
+ 	      }
+ 	    else if ((i_ptr->p1 < 40) && (randint(5) == 1) &&
+ 		     (py.flags.blind < 1))
+@@ -176,6 +201,11 @@
+ 		msg_print("Your light is growing faint.");
+ 	      }
+ 	  }
++	else if (wielding_flame_tongue)
++	  {
++	    if (!known2_p(w_ptr) && flame_tongue_check)
++	      flame_tongue_check = (!notice_flame_tongue());
++	  }
+ 	else
+ 	  {
+ 	    player_light = FALSE;
+@@ -183,13 +213,20 @@
+ 	    /* unlight creatures */
+ 	    creatures(FALSE);
+ 	  }
+-      else if (i_ptr->p1 > 0)
++      else if (i_ptr->p1 > 0 || wielding_flame_tongue)
+ 	{
+-	  i_ptr->p1--;
+ 	  player_light = TRUE;
++	  light_drew_map = FALSE;
+ 	  disturb (0, 1);
+ 	  /* light creatures */
+ 	  creatures(FALSE);
++	  if (i_ptr->p1 > 0)
++	    {
++	      i_ptr->p1--;
++	      flame_tongue_check = TRUE;
++	    }
++	  else if (!known2_p(w_ptr))
++	    flame_tongue_check = (!notice_flame_tongue());
+ 	}
+ 
+       /* Update counters and messages			*/
+@@ -342,9 +379,13 @@
+ 	      prt_blind();
+ 	      prt_map();
+ 	      /* light creatures */
++	      light_drew_map = FALSE;
+ 	      disturb (0, 1);
+ 	      creatures(FALSE);
+ 	      msg_print("The veil of darkness lifts.");
++	      if (wielding_flame_tongue && !known2_p(w_ptr)
++		  && flame_tongue_check)
++		flame_tongue_check = (!notice_flame_tongue());
+ 	    }
+ 	}
+       /* Confusion	       */
+@@ -2169,3 +2210,32 @@
+       inven_destroy(i);
+     }
+ }
++
++
++/* A wielded FT will give off light. Returns true if player notices */
++static int notice_flame_tongue()
++{
++  int i, j, notice;
++  vtype msg_str;
++
++  notice = FALSE;
++  if (py.flags.blind < 1)
++    {
++      if (light_drew_map)
++	notice = TRUE;
++      else
++	for (i = char_row-1; i <= char_row+1; i++)
++	  for (j = char_col-1; j <= char_col+1; j++)
++	    if (cave[i][j].fval <= MAX_CAVE_FLOOR
++		&& !(cave[i][j].pl || cave[i][j].fm))
++	      notice = TRUE;
++      if (notice)
++	{
++	  (void) sprintf(msg_str, "Your %s shines with a light of its own!",
++			 &object_list[inventory[INVEN_WIELD].index].name[2]);
++	  msg_print(msg_str);
++	  add_inscribe(&inventory[INVEN_WIELD], ID_MAGIK);
++	}
++    }
++  return (notice);
++}
+--- moria-5.5.2.orig/source/externs.h
++++ moria-5.5.2/source/externs.h
+@@ -68,6 +68,8 @@
+ extern int teleport_flag;	/* Handle teleport traps  */
+ extern int eof_flag;		/* Used to handle eof/HANGUP */
+ extern int player_light;      /* Player carrying light */
++extern int flame_tongue_check;	/* Schedule a FT-as-light-source check */
++extern int light_drew_map;	/* Player light drew a door/stair/wall */
+ extern int find_flag;	/* Used in MORIA	      */
+ extern int free_turn_flag;	/* Used in MORIA	      */
+ extern int weapon_heavy;	/* Flag if the weapon too heavy -CJS- */
+--- moria-5.5.2.orig/source/moria1.c
++++ moria-5.5.2/source/moria1.c
+@@ -1126,7 +1126,11 @@
+ 			      msg_print(prt1);
+ 			      /* this is a new weapon, so clear heavy flag */
+ 			      if (slot == INVEN_WIELD)
+-				weapon_heavy = FALSE;
++				{
++				  weapon_heavy = FALSE;
++				  flame_tongue_check = TRUE;
++				  light_drew_map = FALSE;
++				}
+ 			      check_strength();
+ #ifdef ATARIST_MWC
+ 			      if (i_ptr->flags & (holder = TR_CURSED))
+@@ -1654,12 +1658,20 @@
+ 	if (light_flag)
+ 	  c_ptr->tl = TRUE;
+ 	if (c_ptr->fval >= MIN_CAVE_WALL)
+-	  c_ptr->pl = TRUE;
++	  {
++	    if (!c_ptr->pl)
++	      light_drew_map = TRUE;
++	    c_ptr->pl = TRUE;
++	  }
+ 	else if (!c_ptr->fm && c_ptr->tptr != 0)
+ 	  {
+ 	    tval = t_list[c_ptr->tptr].tval;
+ 	    if ((tval >= TV_MIN_VISIBLE) && (tval <= TV_MAX_VISIBLE))
+-	      c_ptr->fm = TRUE;
++	      {
++		if (!c_ptr->fm)
++		  light_drew_map = TRUE;
++		c_ptr->fm = TRUE;
++	      }
+ 	  }
+       }
+ 
+--- moria-5.5.2.orig/source/variable.c
++++ moria-5.5.2/source/variable.c
+@@ -73,6 +73,8 @@
+ int new_level_flag;		/* Next level when true	 */
+ int teleport_flag;		/* Handle teleport traps  */
+ int player_light;		/* Player carrying light */
++int flame_tongue_check;		/* Schedule a FT-as-light-source check */
++int light_drew_map;		/* Player light drew a door/stair/wall */
+ int eof_flag = FALSE;		/* Used to signal EOF/HANGUP condition */
+ int light_flag = FALSE;		/* Track if temporary light about player.  */
+ 

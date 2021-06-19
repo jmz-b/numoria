@@ -1,0 +1,102 @@
+Unofficial Umoria 5.5.2 patch collection version 3.
+Copyright (c) 2001-2006 Lars Helgeland <lhelgeland@yahoo.com>.
+The most recent version of this archive can be found at
+<http://www.geocities.com/lhelgeland/umoria.html>.
+
+
+New in version 3 (2006-12-31)
+-----------------------------
+Added the four patches posted to rec.games.roguelike.moria in 2003, 2004
+and 2005.  Added a basic Linux/glibc2 build patch, since Debian's Umoria
+port (which is what I relied on to build previous versions) has been
+orphaned and looks set to go away once Debian 4.0 is released.
+I also got rid of the cumulative patches and pooled everything into one
+directory.
+
+License
+-------
+All my changes to the Umoria source are released both under the terms of
+the GNU General Public License version 2, and under the traditional Moria
+license.  They may be redistributed and/or modified under the terms of
+the GPL (version 2 or any later version) or under the terms of Moria
+license, whichever you prefer.  (See the file 'GPL' for a copy of the GPL
+version 2.  Note that any patched sources must necessarily remain under
+the traditional Moria license until such time that either all contributing
+authors have released their code under the GPL or else Umoria has been
+rewritten from scratch and released under the GPL.)
+
+Contents of this archive
+------------------------
+There are twelve patches.  The ones named fix-* are bugfixes and are
+discussed in some more detail in separate fix-*.readme files.
+
+fix-buffer-overflows.diff
+  Fixes a number of sprintf() buffer overflows.
+
+fix-inscription-length.diff
+  Fixes a couple of bugs that unduly restricts the length of a
+  user-supplied inscription.  Depends on bugfixes/buffer-overflows.diff.
+
+fix-tried-inscription.diff
+  Fixes a bug that is sometimes seen in the early stages of a new game,
+  where the auto-generated 'tried' inscription on an item that has been
+  quaffed/read/zapped but not immediately identified disappears after
+  a while for no apparent reason.
+
+cancel-WoR.diff
+  Makes a second scroll of Word-of-Recall, read before a previous scroll
+  has taken effect, cancel Word-of-Recall.  The wording of the cancel
+  message is the same as in Angband, since I can't think of a good reason
+  to use a different message.
+
+lost-items-feedback.diff
+  Identifies the backpack item or the amount of gold that was stolen
+  by a thieving creature, the backpack item or items that were destroyed
+  by acid/lightning/fire/frost, or the piece of armour or weapon that was
+  ruined by a disenchant attack.
+
+randomize-food-theft.diff
+  Makes creatures that steal (eat) food as part of their attack repertoire
+  pick a random food slot.  Identifies the item lost by telling how many,
+  if any, remain of it.
+
+promote-mage-books.diff
+  Puts spell books ahead of prayer books for mages, rogues and rangers;
+  leaves inventory order unchanged for all other classes.
+
+FT-intrinsic-light.diff
+  Turns a wielded Flame Tongue weapon into a light source.  (Credit for
+  this idea belongs to Ed Lee and his February 2003 Color Umoria update.)
+
+auto-haggle.diff
+  Adds a user-settable option 'Disable haggling' which disables haggling
+  in the stores, at the cost of a 10 percent tax on the final price on items
+  you would otherwise have had to haggle for.  When auto-haggle is on, all
+  prices displayed in the stores are the actual prices you have to pay.
+
+buy-sell-any-number.diff
+  Updates the standard store/haggling code as well as the auto-haggle
+  patch to let you buy or sell more than one item at a time.  To avoid
+  the problem of fractional single-item prices, prices in the stores will
+  no longer be fixed unless the final price is reached during haggling.
+  Removes all hard-coded assumptions that a store's inventory will always
+  fit in two pages (two times 12 lines), i.e. STORE_INVEN_MAX can now
+  usefully be increased in constant.h.  Depends on auto-haggle.diff.
+
+quick-messages.diff
+  Allows the currently selected direction keys to clear a -more- prompt.
+  Depends on auto-haggle.diff (for overlapping contexts).
+
+linux-glibc2-build.diff
+  Eases building of Umoria on Linux/glibc2.  (The signal stuff still needs
+  considerable work though.)
+
+Applying the patches
+--------------------
+If you are working with a clean set of sources, and you observe
+the dependencies noted above, applying each patch is just a matter of
+issuing a 'patch -p1 < patchfile' command from the root directory of your
+Umoria 5.5.2 source installation.  Since the patches are not serialized
+(yet, although I am thinking about it), you might get occasional messages
+from patch about offsets, but ultimately everything should apply correctly.
+

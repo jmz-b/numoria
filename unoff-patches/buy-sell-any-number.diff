@@ -1,0 +1,725 @@
+--- moria-5.5.2.temp/source/externs.h	Mon Sep 23 20:59:00 2002
++++ moria-5.5.2/source/externs.h	Mon Sep 23 21:00:00 2002
+@@ -506,6 +506,7 @@
+ int verify(char *, int);
+ void inven_command(char);
+ int get_item(int *, char *, int, int, char *, char *);
++int8u get_quantity(struct inven_type *, char *, int8u);
+ int no_light(void);
+ int get_dir(char *, int *);
+ int get_alldir(char *, int *);
+@@ -1018,6 +1019,7 @@
+ int verify();
+ void inven_command();
+ int get_item();
++int8u get_quantity();
+ int no_light();
+ int get_dir();
+ int get_alldir();
+--- moria-5.5.2.temp/source/moria1.c	Fri Jul 22 03:47:33 1994
++++ moria-5.5.2/source/moria1.c	Mon Sep 23 21:00:00 2002
+@@ -1438,6 +1438,35 @@
+   return(item);
+ }
+ 
++
++/* Get a quantity of a stackable item */
++int8u get_quantity(item, pmt, deflt)
++inven_type *item;
++char *pmt;
++int8u deflt;
++{
++  int col, num;
++  int8u max_num;
++  vtype pmt_str, num_str;
++
++  if ((max_num = item->number) == 1 || item->subval > ITEM_GROUP_MIN)
++    return (max_num);
++  (void) sprintf(pmt_str, "(0-%d, ESC to exit) %s [%d] ", max_num, pmt, deflt);
++  col = strlen(pmt_str);
++  prt(pmt_str, 0, 0);
++  if (!get_string(num_str, 0, col, 4))
++    num = 0;
++  else if (*num_str == '\0')
++    num = deflt;
++  else if ((num = atoi(num_str)) > max_num)
++    num = max_num;
++  else if (num < 0)
++    num = 0;
++  erase_line (0, 0);
++  return ((int8u)num);
++}
++
++
+ /* I may have written the town level code, but I'm not exactly	 */
+ /* proud of it.	 Adding the stores required some real slucky	 */
+ /* hooks which I have not had time to re-think.		 -RAK-	 */
+--- moria-5.5.2.temp/source/store1.c	Fri Jul 22 03:47:45 1994
++++ moria-5.5.2/source/store1.c	Mon Sep 23 21:00:00 2002
+@@ -189,7 +189,10 @@
+ 	/* note: items with subval of gte ITEM_SINGLE_STACK_MAX only stack
+ 	   if their subvals match */
+ 	if (i_ptr->tval == t_ptr->tval && i_ptr->subval == t_ptr->subval
+-	    && ((int)i_ptr->number + (int)t_ptr->number < 256)
++	    && (t_ptr->subval <= ITEM_GROUP_MIN
++		|| (int)i_ptr->number + (int)t_ptr->number < 256)
++		/* For single stackable items and torches, ignore the numbers
++		   check since store_carry() won't keep more than 24 anyway */
+ 	    && (t_ptr->subval < ITEM_GROUP_MIN
+ 		|| (i_ptr->p1 == t_ptr->p1)))
+ 	  store_check = TRUE;
+@@ -245,27 +248,42 @@
+ 	    {
+ 	      if (subt == i_ptr->subval && /* Adds to other item	*/
+ 		  subt >= ITEM_SINGLE_STACK_MIN
+-		  && (subt < ITEM_GROUP_MIN || i_ptr->p1 == t_ptr->p1))
++		  && (subt < ITEM_GROUP_MIN || i_ptr->p1 == t_ptr->p1)
++		  && (subt <= ITEM_GROUP_MIN
++			|| (int)i_ptr->number + item_num < 256))
++		/* The chance that the number of a group stack item should
++		   exceed 255 is extremely remote, but if it does happen,
++		   and if store_check_num() was called before store_carry(),
++		   there must be a free slot somewhere, so skip this slot */
+ 		{
+ 		  *ipos = item_val;
+-		  i_ptr->number += item_num;
+ 		  /* must set new scost for group items, do this only for items
+ 		     strictly greater than group_min, not for torches, this
+ 		     must be recalculated for entire group */
+ 		  if (subt > ITEM_GROUP_MIN)
+ 		    {
++		      i_ptr->number += item_num;  /* Sum is <= 255 */
+ 		      (void) sell_price (store_num, &icost, &dummy, i_ptr);
+ 		      s_ptr->store_inven[item_val].scost = -icost;
+ 		    }
+ 		  /* must let group objects (except torches) stack over 24
+ 		     since there may be more than 24 in the group */
+-		  else if (i_ptr->number > 24)
+-		    i_ptr->number = 24;
++		  else
++		    {
++		      /* Sum may be > 255, so use lvalue that won't overflow */
++		      item_num += i_ptr->number;
++		      if (item_num > 24)
++			i_ptr->number = 24;
++		      else
++			i_ptr->number = item_num;
++		    }
+ 		  flag = TRUE;
+ 		}
+ 	    }
+ 	  else if (typ > i_ptr->tval)
+ 	    {		/* Insert into list		*/
++	      if (subt <= ITEM_GROUP_MIN && item_num > 24)
++		t_ptr->number = 24;
+ 	      insert_store(store_num, item_val, icost, t_ptr);
+ 	      flag = TRUE;
+ 	      *ipos = item_val;
+@@ -275,6 +293,8 @@
+       while ((item_val < s_ptr->store_ctr) && (!flag));
+       if (!flag)	/* Becomes last item in list	*/
+ 	{
++	  if (subt <= ITEM_GROUP_MIN && item_num > 24)
++	    t_ptr->number = 24;
+ 	  insert_store(store_num, (int)s_ptr->store_ctr, icost, t_ptr);
+ 	  *ipos = s_ptr->store_ctr - 1;
+ 	}
+--- moria-5.5.2.temp/source/store2.c	Mon Sep 23 20:59:00 2002
++++ moria-5.5.2/source/store2.c	Mon Sep 23 21:00:00 2002
+@@ -34,7 +34,7 @@
+ static void display_commands(void);
+ static void haggle_commands(int);
+ static void display_inventory(int, int);
+-static void display_cost(int, int);
++static void display_item(int, int);
+ static void store_prt_gold(void);
+ static void display_store(int, int);
+ static int get_store_item(int *, char *, int, int);
+@@ -43,8 +43,8 @@
+ static int haggle_insults(int);
+ static int get_haggle(char *, int32 *, int);
+ static int receive_offer(int, char *, int32 *, int32, int, int);
+-static int purchase_haggle(int, int32 *, struct inven_type *);
+-static int sell_haggle(int, int32 *, struct inven_type *);
++static int purchase_haggle(int, int32 *, struct inven_type *, int *);
++static int sell_haggle(int, int32 *, struct inven_type *, int);
+ static int store_purchase(int, int *);
+ static int store_sell(int, int *);
+ #endif
+@@ -230,15 +230,64 @@
+ }
+ 
+ 
++/* Displays a single item in a store's inventory */
++static void display_item(store_num, pos)
++int store_num, pos;
++{
++  register int i;
++  register int32 j;
++  register store_type *s_ptr;
++  inven_type *i_ptr;
++  bigvtype out_val1, out_val2;
++
++  s_ptr = &store[store_num];
++  i = (pos % 12);
++  i_ptr = &s_ptr->store_inven[pos].sitem;
++  objdes(out_val1, i_ptr, TRUE);
++  (void) sprintf(out_val2, "%c) %s", 'a'+i, out_val1);
++  prt(out_val2, i+5, 0);
++  j = s_ptr->store_inven[pos].scost;
++  if (j <= 0)
++    if (!auto_haggle)
++      {
++	j = -j * chr_adj() / 100;
++	if (j <= 0)
++	  j = 1;
++	(void) sprintf(out_val2, "%9ld", j);
++      }
++    else
++      {
++	/* Get the normal haggle asking price and the final price */
++	int32 start_ask, final_ask;
++	(void) sell_price(store_num, &start_ask, &final_ask, i_ptr);
++	start_ask = start_ask * chr_adj() / 100;
++	if (start_ask <= 0)
++	  start_ask = 1;
++	final_ask = final_ask * chr_adj() / 100;
++	if (final_ask <= 0)
++	  final_ask = 1;
++	if (!noneedtobargain(store_num, final_ask))
++	  {
++	    /* Add sales tax to the final price */
++	    final_ask = final_ask + (final_ask * SALES_TAX) / 100;
++	    /* But don't exceed the normal asking price */
++	    if (final_ask > start_ask)
++	      final_ask = start_ask;
++	  }
++	(void) sprintf(out_val2, "%9ld", final_ask);
++      }
++  else
++    (void) sprintf(out_val2, "%9ld [Fixed]", j);
++  prt(out_val2, i+5, 59);
++}
++
++
+ /* Displays a store's inventory				-RAK-	*/
+ static void display_inventory(store_num, start)
+ int store_num, start;
+ {
+   register store_type *s_ptr;
+-  register inven_type *i_ptr;
+   register int i, j, stop;
+-  bigvtype out_val1, out_val2;
+-  int32 x;
+ 
+   s_ptr = &store[store_num];
+   i = (start % 12);
+@@ -246,49 +295,7 @@
+   if (stop > s_ptr->store_ctr)	stop = s_ptr->store_ctr;
+   while (start < stop)
+     {
+-      i_ptr = &s_ptr->store_inven[start].sitem;
+-      x = i_ptr->number;
+-      if ((i_ptr->subval >= ITEM_SINGLE_STACK_MIN)
+-	  && (i_ptr->subval <= ITEM_SINGLE_STACK_MAX))
+-	i_ptr->number = 1;
+-      objdes(out_val1, i_ptr, TRUE);
+-      i_ptr->number = x;
+-      (void) sprintf(out_val2, "%c) %s", 'a'+i, out_val1);
+-      prt(out_val2, i+5, 0);
+-      x = s_ptr->store_inven[start].scost;
+-      if (x <= 0)
+-	if (!auto_haggle)
+-	  {
+-	    int32 value = -x;
+-	    value = value * chr_adj() / 100;
+-	    if (value <= 0)
+-	      value = 1;
+-	    (void) sprintf(out_val2, "%9ld", value);
+-	  }
+-	else
+-	  {
+-	    /* Get the normal haggle asking price and the final price */
+-	    int32 start_ask, final_ask;
+-	    (void) sell_price(store_num, &start_ask, &final_ask, i_ptr);
+-	    start_ask = start_ask * chr_adj() / 100;
+-	    if (start_ask <= 0)
+-	      start_ask = 1;
+-	    final_ask = final_ask * chr_adj() / 100;
+-	    if (final_ask <= 0)
+-	      final_ask = 1;
+-	    if (!noneedtobargain(store_num, final_ask))
+-	      {
+-		/* Add sales tax to the final price */
+-		final_ask = final_ask + (final_ask * SALES_TAX) / 100;
+-		/* But don't exceed the normal asking price */
+-		if (final_ask > start_ask)
+-		  final_ask = start_ask;
+-	      }
+-	    (void) sprintf(out_val2, "%9ld", final_ask);
+-	  }
+-      else
+-	(void) sprintf(out_val2,"%9ld [Fixed]", x);
+-      prt(out_val2, i+5, 59);
++      display_item(store_num, start);
+       i++;
+       start++;
+     }
+@@ -302,29 +309,6 @@
+ }
+ 
+ 
+-/* Re-displays only a single cost			-RAK-	*/
+-static void display_cost(store_num, pos)
+-int store_num, pos;
+-{
+-  register int i;
+-  register int32 j;
+-  vtype out_val;
+-  register store_type *s_ptr;
+-
+-  s_ptr = &store[store_num];
+-  i = (pos % 12);
+-  if (s_ptr->store_inven[pos].scost < 0)
+-    {
+-      j = - s_ptr->store_inven[pos].scost;
+-      j = j * chr_adj() / 100;
+-      (void) sprintf(out_val, "%ld", j);
+-    }
+-  else
+-    (void) sprintf(out_val, "%9ld [Fixed]", s_ptr->store_inven[pos].scost);
+-  prt(out_val, i+5, 59);
+-}
+-
+-
+ /* Displays players gold					-RAK-	*/
+ static void store_prt_gold()
+ {
+@@ -551,10 +535,11 @@
+ 
+ 
+ /* Haggling routine					-RAK-	*/
+-static int purchase_haggle(store_num, price, item)
++static int purchase_haggle(store_num, price, item, best_price)
+ int store_num;
+ int32 *price;
+ inven_type *item;
++int *best_price;
+ {
+   int32 max_sell, min_sell, max_buy;
+   int32 cost, cur_ask, final_ask, min_offer;
+@@ -567,30 +552,52 @@
+   int purchase, num_offer, final_flag, didnt_haggle;
+   register store_type *s_ptr;
+   register owner_type *o_ptr;
++  int32 tax;
++  int8u num;
++  int fixed_price, no_need;
+ 
++  num = item->number;
++  fixed_price = (*price > 0);
+   flag = FALSE;
+   purchase = 0;
+-  *price = 0;
+   final_flag = 0;
+   didnt_haggle = FALSE;
+   s_ptr = &store[store_num];
+   o_ptr = &owners[s_ptr->owner];
+   cost = sell_price(store_num, &max_sell, &min_sell, item);
+-  max_sell = max_sell * chr_adj() / 100;
+-  if (max_sell <= 0)  max_sell = 1;
+-  min_sell = min_sell * chr_adj() / 100;
+-  if (min_sell <= 0)  min_sell = 1;
+-  if (auto_haggle && !noneedtobargain(store_num, min_sell))
++  if (fixed_price)
++    max_sell = min_sell = *price;
++  else
+     {
+-      /* Add sales tax to the final price */
+-      min_sell = min_sell + (min_sell * SALES_TAX) / 100;
+-      /* But don't exceed the normal asking price */
+-      if (min_sell > max_sell)
+-	min_sell = max_sell;
++      max_sell = max_sell * chr_adj() / 100;
++      if (max_sell <= 0)  max_sell = 1;
++      min_sell = min_sell * chr_adj() / 100;
++      if (min_sell <= 0)  min_sell = 1;
++      if (auto_haggle)
++	{
++	  /* Compute a per-item sales tax: SALES_TAX percent of
++	     the final price, or the balance between the asking
++	     price and the final price, whichever is smallest */
++	  tax = min_sell * SALES_TAX / 100;
++	  if (min_sell + tax > max_sell)
++	    tax = max_sell - min_sell;
++	}
+     }
+   /* cast max_inflate to signed so that subtraction works correctly */
+   max_buy  = cost * (200 - (int)o_ptr->max_inflate) / 100;
+   if (max_buy <= 0) max_buy = 1;
++  if (item->subval <= ITEM_GROUP_MIN)
++    {
++      /* Multiply. Let any rounding errors scale with num */
++      max_sell = max_sell * num;
++      min_sell = min_sell * num;
++      max_buy = max_buy * num;
++      if (auto_haggle)
++	tax = tax * num;
++    }
++  no_need = noneedtobargain(store_num, min_sell);  /* Depends on num */
++  if (auto_haggle && !fixed_price && !no_need)
++    min_sell += tax;
+   min_per  = o_ptr->haggle_per;
+   max_per  = min_per * 3;
+   haggle_commands(1);
+@@ -603,9 +610,16 @@
+   comment = "Asking";
+ 
+   /* go right to final price if player has bargained well */
+-  if (auto_haggle || noneedtobargain(store_num, final_ask))
++  if (auto_haggle || fixed_price || no_need)
+     {
+-      msg_print("After a long bargaining session, you agree upon the price.");
++      /* Note the precedence among the conditions in terms of determining
++	 the final price. Should there be a message for each of these? */
++      if (fixed_price)
++	;
++      else if (no_need)
++	msg_print("After a long bargaining session, you agree upon the price.");
++      else /* auto_haggle */
++	;
+       cur_ask = min_sell;
+       comment = "Final offer";
+       didnt_haggle = TRUE;
+@@ -710,6 +724,9 @@
+     }
+   while (!flag);
+ 
++  if (purchase == 0 && *price == final_ask)
++    *best_price = TRUE;
++
+   /* update bargaining info */
+   if ((purchase == 0) && (!didnt_haggle))
+     updatebargain(store_num, *price, final_ask);
+@@ -719,10 +736,11 @@
+ 
+ 
+ /* Haggling routine					-RAK-	*/
+-static int sell_haggle(store_num, price, item)
++static int sell_haggle(store_num, price, item, item_val)
+ int store_num;
+ int32 *price;
+ inven_type *item;
++int item_val;
+ {
+   int32 max_sell, max_buy, min_buy;
+   int32 cost, cur_ask, final_ask, min_offer;
+@@ -736,6 +754,10 @@
+   register store_type *s_ptr;
+   register owner_type *o_ptr;
+   int sell, num_offer, final_flag, didnt_haggle;
++  int32 tax;
++  int8u num;
++  int no_need;
++  bigvtype long_desc, long_msg;
+ 
+   flag = FALSE;
+   sell = 0;
+@@ -762,13 +784,14 @@
+       if (min_buy < 1) min_buy = 1;
+       if (max_buy < 1) max_buy = 1;
+       if (min_buy < max_buy)  min_buy = max_buy;
+-      if (auto_haggle && !noneedtobargain(store_num, min_buy))
++      if (auto_haggle)
+ 	{
+-	  /* Subtract sales tax from the final price */
+-	  min_buy = min_buy - (min_buy * SALES_TAX) / 100;
+-	  /* But don't offer less than opening bid during haggling */
+-	  if (min_buy < max_buy)
+-	    min_buy = max_buy;
++	  /* Compute a per-item sales tax: SALES_TAX percent of
++	     the final price, or the balance between the final
++	     price and the opening bid, whichever is smallest */
++	  tax = min_buy * SALES_TAX / 100;
++	  if (min_buy - tax < max_buy)
++	    tax = min_buy - max_buy;
+ 	}
+       min_per  = o_ptr->haggle_per;
+       max_per  = min_per * 3;
+@@ -776,10 +799,13 @@
+     }
+   if (!flag)
+     {
+-      haggle_commands(-1);
+       num_offer = 0; /* this prevents incremental haggling on first try */
+       if (max_buy > max_gold)
+ 	{
++	  objdes(long_desc, item, TRUE);
++	  (void) sprintf(long_msg, "Selling %s (%c)", long_desc, item_val+'a');
++	  msg_print(long_msg);
++	  haggle_commands(-1);
+ 	  final_flag= 1;
+ 	  comment = "Final Offer";
+ 	  /* Disable the automatic haggle increment on RET.  */
+@@ -792,17 +818,45 @@
+ 	}
+       else
+ 	{
++	  num = get_quantity(&inventory[item_val], "How many?", 1);
++	  if (num == 0)
++	    return (1);  /* 0=sold, 1=break, 2=kicked out, 3=known bad item */
++	  item->number = num;
++	  /* No need to recheck store_check_num() here; the call in
++	     store_sell() covers the case for group stack items and
++	     solitary single stackable items, and for multiple single
++	     stackable items no more than 24 will be kept anyway */
+ 	  cur_ask   = max_buy;
+ 	  final_ask = min_buy;
+ 	  if (final_ask > max_gold)
+ 	    final_ask = max_gold;
++	  if (item->subval <= ITEM_GROUP_MIN)
++	    {
++	      /* Multiply. Let any rounding errors scale with num */
++	      max_sell = max_sell * num;
++	      cur_ask = cur_ask * num;
++	      final_ask = final_ask * num;
++	      if (auto_haggle)
++		tax = tax * num;
++	    }
++	  no_need = noneedtobargain(store_num, final_ask);  /* Depends on num */
++	  if (auto_haggle && !no_need)
++	    final_ask -= tax;
++	  objdes(long_desc, item, TRUE);
++	  (void) sprintf(long_msg, "Selling %s (%c)", long_desc, item_val+'a');
++	  msg_print(long_msg);
++	  haggle_commands(-1);
+ 	  comment = "Offer";
+ 
+ 	  /* go right to final price if player has bargained well */
+-	  if (auto_haggle || noneedtobargain(store_num, final_ask))
++	  if (auto_haggle || no_need)
+ 	    {
+-	      msg_print("After a long bargaining session, you agree upon \
++	      if (no_need)
++		msg_print("After a long bargaining session, you agree upon \
+ the price.");
++	      else
++		/* Should there be a message for auto_haggle as well? */
++		;
+               cur_ask = final_ask;
+ 	      comment = "Final offer";
+ 	      didnt_haggle = TRUE;
+@@ -931,17 +985,17 @@
+   register store_type *s_ptr;
+   inven_type sell_obj;
+   register inven_record *r_ptr;
+-  int item_val, item_new, purchase;
++  int item_val, item_new, purchase, best_price;
++  int8u c, num;
+ 
+   purchase = FALSE;
++  best_price = FALSE;
+   s_ptr = &store[store_num];
+-  /* i == number of objects shown on screen	*/
+-  if (*cur_top == 12)
+-    i = s_ptr->store_ctr - 1 - 12;
+-  else if (s_ptr->store_ctr > 11)
++  /* i == number of objects shown on screen less 1 */
++  if (s_ptr->store_ctr - *cur_top > 12)  /* Not the last page */
+     i = 11;
+   else
+-    i = s_ptr->store_ctr - 1;
++    i = ((s_ptr->store_ctr - 1) % 12);
+   if (s_ptr->store_ctr < 1)
+     msg_print("I am currently out of stock.");
+       /* Get the item number to be bought		*/
+@@ -949,16 +1003,27 @@
+ 			  "Which item are you interested in? ", 0, i))
+     {
+       item_val = item_val + *cur_top;	/* TRUE item_val	*/
+-      take_one_item(&sell_obj, &s_ptr->store_inven[item_val].sitem);
+-      if (inven_check_num(&sell_obj))
++      r_ptr = &s_ptr->store_inven[item_val];
++      take_one_item(&sell_obj, &r_ptr->sitem);
++      if (!inven_check_num(&sell_obj))
++	prt("You cannot carry that many different items.", 0, 0);
++      else if ((num = get_quantity(&r_ptr->sitem, "How many?", 1)) == 0)
++	;
++      else if (sell_obj.number = num , !inven_check_num(&sell_obj))
++	prt("You cannot carry that many.", 0, 0);
++      else
+ 	{
+-	  if (s_ptr->store_inven[item_val].scost > 0)
+-	    {
+-	      price = s_ptr->store_inven[item_val].scost;
+-	      choice = 0;
+-	    }
++	  objdes(tmp_str, &sell_obj, TRUE);
++	  (void) sprintf(out_val, "Buying %s (%c)", tmp_str,
++		item_val % 12 + 'a');
++	  msg_print(out_val);
++	  if (r_ptr->scost > 0)
++	    /* Price is already fixed but call purchase_haggle() anyway
++	       so player gets a chance to change his mind */
++	    price = r_ptr->scost;
+ 	  else
+-	    choice = purchase_haggle(store_num, &price, &sell_obj);
++	    price = 0;
++	  choice = purchase_haggle(store_num, &price, &sell_obj, &best_price);
+ 	  if (choice == 0)
+ 	    {
+ 	      if (py.misc.au >= price)
+@@ -968,30 +1033,37 @@
+ 		  py.misc.au -= price;
+ 		  item_new = inven_carry(&sell_obj);
+ 		  i = s_ptr->store_ctr;
+-		  store_destroy(store_num, item_val, TRUE);
++		  /* store_destroy() should probably be rewritten to input
++		     the number of items to destroy, regardless of subval,
++		     and the special processing done when it's called from
++		     store_maint() moved to store_maint() */
++		  if (sell_obj.subval > ITEM_GROUP_MIN)
++		    store_destroy(store_num, item_val, TRUE);
++		  else
++		    for (c = 0; c < num; c++)
++		      store_destroy(store_num, item_val, TRUE);
+ 		  objdes(tmp_str, &inventory[item_new], TRUE);
+ 		  (void) sprintf(out_val, "You have %s (%c)",
+ 				   tmp_str, item_new+'a');
+ 		  prt(out_val, 0, 0);
+ 		  check_strength();
+-		  if (*cur_top >= s_ptr->store_ctr)
+-		    {
+-		      *cur_top = 0;
+-		      display_inventory(store_num, *cur_top);
+-		    }
++		  if (*cur_top < s_ptr->store_ctr)
++		    /* The current inventory page is not yet empty */
++		    if (i == s_ptr->store_ctr)
++		      /* There is more in stock of this item */
++		      {
++			if (r_ptr->scost < 0 && best_price && !auto_haggle)
++			  r_ptr->scost = price / num;  /* Fix the price */
++			display_item(store_num, item_val);
++		      }
++		    else
++		      display_inventory(store_num, item_val);
+ 		  else
+ 		    {
+-		      r_ptr = &s_ptr->store_inven[item_val];
+-		      if (i == s_ptr->store_ctr)
+-			{
+-			  if (!auto_haggle && (r_ptr->scost < 0))
+-			    {
+-			      r_ptr->scost = price;
+-			      display_cost(store_num, item_val);
+-			    }
+-			}
+-		      else
+-			display_inventory(store_num, item_val);
++		      if (*cur_top >= 12)
++			*cur_top -= 12;
++		      display_inventory(store_num, *cur_top);
++
+ 		    }
+ 		  store_prt_gold();
+ 		}
+@@ -1013,8 +1085,6 @@
+ 	  display_commands();
+ 	  erase_line (1, 0);
+ 	}
+-      else
+-	prt("You cannot carry that many different items.", 0, 0);
+     }
+   return(purchase);
+ }
+@@ -1057,12 +1127,9 @@
+ 		    "I do not buy such items."))
+     {
+       take_one_item(&sold_obj, &inventory[item_val]);
+-      objdes(tmp_str, &sold_obj, TRUE);
+-      (void) sprintf(out_val, "Selling %s (%c)", tmp_str, item_val+'a');
+-      msg_print(out_val);
+       if (store_check_num(&sold_obj, store_num))
+ 	{
+-	  choice = sell_haggle(store_num, &price, &sold_obj);
++	  choice = sell_haggle(store_num, &price, &sold_obj, item_val);
+ 	  if (choice == 0)
+ 	    {
+ 	      prt_comment1();
+@@ -1070,31 +1137,36 @@
+ 	      py.misc.au += price;
+ 	      /* identify object in inventory to set object_ident */
+ 	      identify(&item_val);
+-	      /* retake sold_obj so that it will be identified */
+-	      take_one_item(&sold_obj, &inventory[item_val]);
++	      /* sold_obj.number holds the quantity sold, don't clear it */
++	      sold_obj.ident = inventory[item_val].ident;  /* |= ID_DAMD */
+ 	      /* call known2 for store item, so charges/pluses are known */
+ 	      known2(&sold_obj);
+-	      inven_destroy(item_val);
++	      /* inven_destroy() should probably be rewritten to input
++		 the number of items to destroy, regardless of subval */
++	      if (sold_obj.subval > ITEM_GROUP_MIN)
++		inven_destroy(item_val);
++	      else
++		for (counter = 0; counter < sold_obj.number; counter++)
++		  inven_destroy(item_val);
+ 	      objdes(tmp_str, &sold_obj, TRUE);
+ 	      (void) sprintf(out_val, "You've sold %s", tmp_str);
+ 	      msg_print(out_val);
++	      counter = store[store_num].store_ctr;
+ 	      store_carry(store_num, &item_pos, &sold_obj);
+ 	      check_strength();
+-	      if (item_pos >= 0)
++	      if (item_pos >= 0)  /* Bad items never enter the inventory */
+ 		{
+-		  if (item_pos < 12)
+-		    if (*cur_top < 12)
+-		      display_inventory(store_num, item_pos);
++		  if (*cur_top == (item_pos / 12) * 12)
++		    /* The change happened on the current inventory page */
++		    if (counter == store[store_num].store_ctr)
++		      /* Increased the stock of an existing item */
++		      display_item(store_num, item_pos);
+ 		    else
+-		      {
+-			*cur_top = 0;
+-			display_inventory(store_num, *cur_top);
+-		      }
+-		  else if (*cur_top > 11)
+-		    display_inventory(store_num, item_pos);
++		      /* Added a new kind of item */
++		      display_inventory(store_num, item_pos);
+ 		  else
+ 		    {
+-		      *cur_top = 12;
++		      *cur_top = (item_pos / 12) * 12;
+ 		      display_inventory(store_num, *cur_top);
+ 		    }
+ 		}
+@@ -1144,18 +1216,14 @@
+ 	      switch(command)
+ 		{
+ 		case 'b':
+-		  if (cur_top == 0)
+-		    if (s_ptr->store_ctr > 12)
+-		      {
+-			cur_top = 12;
+-			display_inventory(store_num, cur_top);
+-		      }
+-		    else
+-		      msg_print("Entire inventory is shown.");
++		  if (s_ptr->store_ctr <= 12)
++		    msg_print("Entire inventory is shown.");
+ 		  else
+ 		    {
+-		      cur_top = 0;
+-		      display_inventory(store_num, cur_top);
++		      cur_top += 12;
++		      if (cur_top >= s_ptr->store_ctr)
++			cur_top = 0;
++		      display_inventory(store_num, cur_top, FALSE);
+ 		    }
+ 		  break;
+ 		case 'E': case 'e':	 /* Equipment List	*/

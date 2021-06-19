@@ -1,0 +1,24 @@
+--- moria-5.5.2.temp/source/misc4.c	Tue Aug 27 23:34:38 2002
++++ moria-5.5.2/source/misc4.c	Tue Aug 27 23:36:32 2002
+@@ -32,7 +32,7 @@
+ /* Add a comment to an object description.		-CJS- */
+ void scribe_object()
+ {
+-  int item_val, j;
++  int item_val;
+   bigvtype out_val, tmp_str;
+ 
+   if (inven_ctr > 0 || equip_ctr > 0)
+@@ -47,11 +47,8 @@
+ 			   inventory[item_val].inscrip);
+ 	  else
+ 	    (void) strcpy(out_val, "Inscription: ");
+-	  j = 78 - strlen(tmp_str);
+-	  if (j > 12)
+-	    j = 12;
+ 	  prt(out_val, 0, 0);
+-	  if (get_string(out_val, 0, (int)strlen(out_val), j))
++	  if (get_string(out_val, 0, (int)strlen(out_val), INSCRIP_SIZE - 1))
+ 	    inscribe(&inventory[item_val], out_val);
+ 	}
+     }

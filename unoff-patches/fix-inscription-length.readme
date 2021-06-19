@@ -1,0 +1,33 @@
+The attempt by scribe_object() to restrict the length of a user-supplied
+inscription based on the total length of the item description is
+problematic for several reasons:
+
+misc4.c:50:	  j = 78 - strlen(tmp_str);
+misc4.c:51:	  if (j > 12)
+misc4.c:52:	    j = 12;
+
+* The logic is faulty, since any pre-existing inscription will contribute
+  to strlen(tmp_str).
+
+* If the intent is to cap the total description at 80 characters, the code
+  is off by one for failing to take into account that an inscription is
+  preceded by two new characters (space, opening brace), as well as
+  followed by one. (It is off by two if one considers the need to store
+  the terminating null byte).
+
+* As the comment at the start of objdes() conveys an intent to allow
+  descriptions well beyond 80 characters, the attempt to restrict the total
+  description to 80 (or 81, or 82) characters seems flawed to begin with.
+
+In fact, if the local variables tmp_str and out_val are both declared to be
+of type bigvtype, as is required to eliminate the risk of buffer overflows
+in the objdes() call as well as the immediately following sprintf() call,
+and which is implemented by the buffer-overflows.diff patch, then the above
+code can simply be removed in its entirity, along with the declaration of
+the local variable j.
+
+There is still a maximum allowable inscription length which needs to be
+supplied in the call to get_string(), but it is determined by the value of
+macro INSCRIP_SIZE and should be referenced through this macro and not
+as the literal value 12.
+

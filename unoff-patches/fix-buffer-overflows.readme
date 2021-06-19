@@ -1,0 +1,38 @@
+There is a sprintf() buffer overflow in inven_drop() caused by a
+vtype/bigvtype mismatch:
+
+misc3.c:1287:      (void) sprintf (prt2, "Dropped %s", prt1);
+
+This is the only such overflow-inducing mismatch I have been able
+to find. The obvious fix is to declare prt2 to be of type bigvtype.
+
+There is another sprintf() buffer overflow in scribe_object(),
+following a call to objdes() that fails to supply a bigvtype (the only
+such call I have been able to find):
+
+misc4.c:42:	  objdes(tmp_str, &inventory[item_val], TRUE);
+misc4.c:43:	  (void) sprintf(out_val, "Inscribing %s", tmp_str);
+
+Given the current inscription code, the call to objdes() can itself
+overflow its target string, by at most two characters, including
+the terminating null byte. (This is assuming that a DF Zweihander is
+the object with the longest description in the game. If this
+assumption is wrong, then the overflow could be larger.)
+The obvious fix is to declare tmp_str and out_val to both be of type
+bigvtype.
+
+There is another minute sprintf() buffer overflow in show_inven():
+
+moria1.c:335:	  (void) sprintf(out_val[i], "  %c) %s", 'a'+i, tmp_val);
+
+and yet another one in show_equip():
+
+moria1.c:469:	  (void) sprintf(out_val[line], "  %c) %-14s: %s", line+'a',
+moria1.c:470:			 prt1, prt2);
+
+Both of these will overflow the target string by at most two characters
+(including the terminating null byte). One possible fix is to increase
+the length of the target strings. Another is to not make the two leading
+blanks part of the target string at all, as per the buffer-overflows.diff
+patch.
+
