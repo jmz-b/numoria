@@ -1,0 +1,27 @@
+# NUmoria Author
+
+NUmoria is a fork of the Umoria restoration project that incorporates and
+updates patches from a number of authors.
+
+James Bowden [-JMZ-] (GPL-3.0-or-later)
+  NUmoria maintainer and primary contributor
+
+Andrew Weber [-ATW-] (GPL v2)
+  Author of the umoria-color fork of the Umoria 5.7.x
+  The color option in NUmoria is heavily based on this fork
+  https://github.com/andrewtweber/umoria-color
+
+Edouard Poor [-EMP-] (GPL v2)
+  Author of the Colour-Umoria patch for Umoria from 1993
+  umoria-color was originally based on this patch
+  https://www.nic.funet.fi/pub/unix/games/moria/unofficial/source/colour.umoria.tar.Z
+
+Lars Helgeland (GPL v2)
+  Author of many patches for Umoria 5.5.2
+  Many of which have been ported to NUmoria
+  https://www.geocities.ws/lhelgeland/umoria.html
+
+Jeffrey D. Hirschberg (GPL v3)
+  Author of browser-based-umoria
+  browser-based-umoria has been integrated into this fork with slight modifications
+  https://github.com/jhirschberg70/browser-based-umoria
