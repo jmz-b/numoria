@@ -413,8 +413,11 @@ static bool scrollSummonUndead() {
 static void scrollWordOfRecall() {
     if (py.flags.word_of_recall == 0) {
         py.flags.word_of_recall = (int16_t)(25 + randomNumber(30));
+        printMessage("The air about you becomes charged.");
+    } else {
+        py.flags.word_of_recall = 0;
+        printMessage("A tension leaves the air around you.");
     }
-    printMessage("The air about you becomes charged.");
 }
 
 // Scrolls for the reading -RAK-
