@@ -37,6 +37,7 @@ namespace config {
         extern bool error_beep_sound;
         extern bool use_colors;
         extern bool draw_solid_walls;
+        extern bool auto_haggle;
     }
 
     namespace dungeon {

@@ -39,6 +39,7 @@ namespace config {
         bool error_beep_sound = true;        // Beep for invalid characters
         bool use_colors = true;              // Show colors
         bool draw_solid_walls = true;        // Use the same FG and BG color for walls so they appear solid
+        bool auto_haggle = true;             // Auto-haggle in shops
     } // namespace options
 
     // Dungeon generation values

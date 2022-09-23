@@ -133,6 +133,9 @@ static bool svWrite() {
     if (config::options::draw_solid_walls) {
         l |= 0x1000;
     }
+    if (config::options::auto_haggle) {
+        l |= 0x2000;
+    }
     if (game.character_is_dead) {
         // Sign bit
         l |= 0x80000000L;
@@ -564,6 +567,7 @@ bool loadGame(bool &generate) {
         config::options::display_counts = (l & 0x400) != 0;
         config::options::use_colors = (l & 0x800) != 0;
         config::options::draw_solid_walls = (l & 0x1000) != 0;
+        config::options::auto_haggle = (l & 0x2000) != 0;
 
         // Don't allow resurrection of game.total_winner characters.  It causes
         // problems because the character level is out of the allowed range.
