@@ -24,12 +24,24 @@ bool initializeScoreFile() {
 // Attempt to open and print the file containing the intro splash screen text -RAK-
 void displaySplashScreen() {
     vtype_t in_line = {'\0'};
+    int color;
 
     FILE *screen_file = fopen(config::files::splash_screen.c_str(), "r");
     if (screen_file != nullptr) {
         clearScreen();
         for (int i = 0; fgets(in_line, 80, screen_file) != CNIL; i++) {
-            putString(in_line, Coord_t{i, 0});
+            if (i == 3) {
+                color = Color_Red;
+            } else if (i > 4 && i < 12) {
+                color = Color_Orange;
+            } else if (i == 14) {
+                color = Color_Yellow;
+            } else if (i > 16 && i < 22) {
+                color = Color_Dark_Grey_Low;
+            } else {
+                color = -1;
+            }
+            putString(in_line, Coord_t{i, 0}, color);
         }
         waitForContinueKey(23);
 
