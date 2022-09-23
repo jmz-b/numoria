@@ -1153,8 +1153,7 @@ bool spellRechargeItem(int number_of_charges) {
     }
 
     if (fail_chance == 1) {
-        printMessage("There is a bright flash of light.");
-        inventoryDestroyItem(item_id);
+        inventoryDestroyItem(item_id, "There is a bright flash of light.");
     } else {
         number_of_charges = (number_of_charges / (item.depth_first_found + 2)) + 1;
         item.misc_use += 2 + randomNumber(number_of_charges);
