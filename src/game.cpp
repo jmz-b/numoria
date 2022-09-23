@@ -135,6 +135,7 @@ static struct {
     {"Draw solid walls", &config::options::draw_solid_walls},
     {"Auto-haggle", &config::options::auto_haggle},
     {"Full monster recall", &config::options::full_monster_recall},
+    {"Auto-open doors", &config::options::auto_open_door},
     {nullptr, nullptr},
 };
 

@@ -518,17 +518,22 @@ void playerMove(int direction, bool do_pickup) {
             }
         } else {
             // Can't move onto floor space
-
+            bool free_turn = true;
             if ((py.running_tracker == 0) && tile.treasure_id != 0) {
                 if (game.treasure.list[tile.treasure_id].category_id == TV_RUBBLE) {
                     printMessage("There is rubble blocking your way.");
                 } else if (game.treasure.list[tile.treasure_id].category_id == TV_CLOSED_DOOR) {
-                    printMessage("There is a closed door blocking your way.");
+                    if (config::options::auto_open_door) {
+                        openClosedDoor(coord);
+                        free_turn = false;
+                    } else {
+                        printMessage("There is a closed door blocking your way.");
+                    }
                 }
             } else {
                 playerEndRunning();
             }
-            game.player_free_turn = true;
+            game.player_free_turn = free_turn;
         }
     } else {
         // Attacking a creature!
