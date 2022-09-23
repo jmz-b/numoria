@@ -1612,6 +1612,10 @@ static void doWizardCommands(char command) {
             break;
         case '&':
             // Summon a random monster
+            wizardSummonRandomMonster();
+            break;
+        case ')':
+            // Summon a monster
             wizardSummonMonster();
             break;
         case '@':

@@ -11,6 +11,7 @@
 ^T - Teleport player randomly
 ^U - Summon random monster
 ^W - Wizard mode on/off
+)  - Summon a monster
 +  - Gain experience
 %  - Generate a dungeon item
 @  - Create an object *CAN CAUSE FATAL ERROR*
