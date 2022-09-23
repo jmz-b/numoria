@@ -1660,6 +1660,9 @@ static void doCommand(char command) {
             terminalSaveScreen();
             setGameOptions();
             terminalRestoreScreen();
+
+            // Redraw panel because mineral seams / colors may have been changed
+            drawCavePanel();
             game.player_free_turn = true;
             break;
         case '{': // ({) inscribe an object

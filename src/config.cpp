@@ -37,6 +37,8 @@ namespace config {
         bool use_roguelike_keys = false;     // Use classic Roguelike keys
         bool show_inventory_weights = false; // Display weights in inventory
         bool error_beep_sound = true;        // Beep for invalid characters
+        bool use_colors = true;              // Show colors
+        bool draw_solid_walls = true;        // Use the same FG and BG color for walls so they appear solid
     } // namespace options
 
     // Dungeon generation values

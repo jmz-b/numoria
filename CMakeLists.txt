@@ -40,6 +40,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(
     source_files
     "${source_dir}/character.h"
+    "${source_dir}/color.h"
     "${source_dir}/config.h"
     "${source_dir}/curses.h"
     "${source_dir}/dice.h"
@@ -65,6 +66,7 @@ set(
     "${source_dir}/ui.h"
     "${source_dir}/wizard.h"
     "${source_dir}/config.cpp"
+    "${source_dir}/color.cpp"
     "${source_dir}/helpers.cpp"
     "${source_dir}/rng.cpp"
     "${source_dir}/main.cpp"
