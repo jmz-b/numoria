@@ -40,6 +40,7 @@ namespace config {
         bool use_colors = true;              // Show colors
         bool draw_solid_walls = true;        // Use the same FG and BG color for walls so they appear solid
         bool auto_haggle = true;             // Auto-haggle in shops
+        bool full_monster_recall = true;     // Players know everything about monsters they (r)ecall
     } // namespace options
 
     // Dungeon generation values

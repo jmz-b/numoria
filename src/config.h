@@ -38,6 +38,7 @@ namespace config {
         extern bool use_colors;
         extern bool draw_solid_walls;
         extern bool auto_haggle;
+        extern bool full_monster_recall;
     }
 
     namespace dungeon {

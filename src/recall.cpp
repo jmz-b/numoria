@@ -54,7 +54,7 @@ static void memoryPrint(const char *p) {
 
 // Do we know anything about this monster?
 static bool memoryMonsterKnown(Recall_t const &memory) {
-    if (game.wizard_mode) {
+    if (game.wizard_mode || config::options::full_monster_recall) {
         return true;
     }
 
@@ -72,7 +72,10 @@ static bool memoryMonsterKnown(Recall_t const &memory) {
 }
 
 static void memoryWizardModeInit(Recall_t &memory, Creature_t const &creature) {
-    memory.kills = (uint16_t) SHRT_MAX;
+    if (game.wizard_mode) {
+        memory.kills = (uint16_t) SHRT_MAX;
+    }
+
     memory.wake = memory.ignore = UCHAR_MAX;
 
     uint32_t move = (uint32_t)((creature.movement & config::monsters::move::CM_4D2_OBJ) != 0) * 8;
@@ -343,7 +346,7 @@ static void memoryMagicSkills(uint32_t memory_spell_flags, uint32_t monster_spel
 static void memoryKillDifficulty(Creature_t const &creature, uint32_t monster_kills) {
     // the higher the level of the monster, the fewer the kills you need
     // Original knowarmor macro inlined
-    if (monster_kills <= 304u / (4u + creature.level)) {
+    if ((monster_kills <= 304u / (4u + creature.level) && !config::options::full_monster_recall)) {
         return;
     }
 
@@ -591,7 +594,9 @@ int memoryRecall(int monster_id) {
 
     Recall_t saved_memory{};
 
-    if (game.wizard_mode) {
+    // Preserve memory of legitimate discoveries and then populate all
+    // knowledge, whether the player has discovered it or not
+    if (game.wizard_mode || config::options::full_monster_recall) {
         saved_memory = memory;
         memoryWizardModeInit(memory, creature);
     }
@@ -665,7 +670,9 @@ int memoryRecall(int monster_id) {
     memoryPrint("\n");
     putStringClearToEOL("--pause--", Coord_t{roff_print_line, 0});
 
-    if (game.wizard_mode) {
+    // Restore legitimate memory, so that these modes can be disabled mid-run,
+    // and do not effect subsequent runs
+    if (game.wizard_mode || config::options::full_monster_recall) {
         memory = saved_memory;
     }
 
