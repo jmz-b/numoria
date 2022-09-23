@@ -1,0 +1,7 @@
+if ("${NUMORIA_CURSES}" IN_LIST NUMORIA_PDC_PLATFORMS)
+    target_compile_definitions(numoria PUBLIC "PDC_WIDE")
+    target_compile_definitions(numoria PUBLIC "PDC_FORCE_UTF8")
+    target_compile_definitions(numoria PRIVATE "NUMORIA_PDC")
+elseif ("${NUMORIA_CURSES}" STREQUAL "ncurses")
+    target_compile_definitions(numoria PRIVATE "NUMORIA_NCURSES")
+endif ()
