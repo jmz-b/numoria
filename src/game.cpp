@@ -130,6 +130,7 @@ static struct {
     {"Highlight and notice mineral seams", &config::options::highlight_seams},
     {"Beep for invalid character", &config::options::error_beep_sound},
     {"Display rest/repeat counts", &config::options::display_counts},
+    {"Auto-open doors", &config::options::auto_open_door},
     {nullptr, nullptr},
 };
 

@@ -37,6 +37,7 @@ namespace config {
         bool use_roguelike_keys = false;     // Use classic Roguelike keys
         bool show_inventory_weights = false; // Display weights in inventory
         bool error_beep_sound = true;        // Beep for invalid characters
+        bool auto_open_door = true;          // Moving into a closed door automatically trys to open it
     } // namespace options
 
     // Dungeon generation values
