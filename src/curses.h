@@ -8,20 +8,15 @@
 // clang-format off
 
 #ifdef _WIN32
-  // this is defined in Windows and also in ncurses
+  // These are defined in Windows and also in ncurses/pdcurses
   #undef KEY_EVENT
-  #ifdef _MSVC_LANG
-    // On Microsoft Visual Studio 2019, this constant also needs to
-    // be undefined.  Also, we need to use the PDCurses library rather
-    // than a system library, and it has a different include file name.
-    #undef MOUSE_MOVED
-    #include <curses.h>
-  #else
-    #include <ncurses/ncurses.h>
-  #endif
-#elif __NetBSD__
-  #include <curses.h>
-#else
-  #include <ncurses.h>
+  #undef MOUSE_MOVED
 #endif
 
+#ifdef NUMORIA_PDC
+  #include <pdcurses.h>
+#elif NUMORIA_NCURSES
+  #include <ncurses.h>
+#else
+  #include <curses.h>
+#endif

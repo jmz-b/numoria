@@ -4,8 +4,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Current version number of Umoria
-// CMake will extract this information, if you rename these variables
-// then you must also update the CMakeLists.txt.
+// Current version of Umoria
 constexpr uint8_t CURRENT_VERSION_MAJOR = 5;
 constexpr uint8_t CURRENT_VERSION_MINOR = 7;
 constexpr uint8_t CURRENT_VERSION_PATCH = 15;
+
+// Current versions of NUmoria
+constexpr uint8_t NUMORIA_CURRENT_VERSION_MAJOR = ${PROJECT_VERSION_MAJOR};
+constexpr uint8_t NUMORIA_CURRENT_VERSION_MINOR = ${PROJECT_VERSION_MINOR};
+constexpr uint8_t NUMORIA_CURRENT_VERSION_PATCH = ${PROJECT_VERSION_PATCH};
