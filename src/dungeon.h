@@ -33,6 +33,7 @@ typedef struct {
     int16_t to_ac;             // Plusses to AC
     Dice_t damage;             // Damage when hits
     uint8_t depth_first_found; // Dungeon level item first found
+    uint16_t color;            // Color
 } DungeonObject_t;
 
 typedef struct {
@@ -65,6 +66,7 @@ int coordDistanceBetween(Coord_t const &from, Coord_t const &to);
 int coordWallsNextTo(Coord_t const &coord);
 int coordCorridorWallsNextTo(Coord_t const &coord);
 char caveGetTileSymbol(Coord_t const &coord);
+int caveGetTileColor(Coord_t const &coord);
 bool caveTileVisible(Coord_t const &coord);
 
 void dungeonSetTrap(Coord_t const &coord, int sub_type_id);
