@@ -38,3 +38,8 @@ endif()
 # Set the flags and warnings for the debug/release builds
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0 ${cxx_warnings}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 ${cxx_warnings}")
+
+if ("${NUMORIA_CURSES}" STREQUAL "browser")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    set(CMAKE_EXECUTABLE_SUFFIX ".min.js")
+endif ()

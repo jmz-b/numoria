@@ -17,6 +17,8 @@
   #include <pdcurses.h>
 #elif NUMORIA_NCURSES
   #include <ncurses.h>
+#elif __EMSCRIPTEN__
+  #include "browser_curses.h"
 #else
   #include <curses.h>
 #endif

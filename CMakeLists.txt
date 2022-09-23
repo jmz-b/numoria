@@ -39,6 +39,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(
     source_files
+    "${source_dir}/browser_curses.h"
     "${source_dir}/character.h"
     "${source_dir}/color.h"
     "${source_dir}/config.h"
@@ -65,6 +66,8 @@ set(
     "${source_dir}/types.h"
     "${source_dir}/ui.h"
     "${source_dir}/wizard.h"
+    "${source_dir}/browser_curses.cpp"
+    "${source_dir}/browser_io.cpp"
     "${source_dir}/config.cpp"
     "${source_dir}/color.cpp"
     "${source_dir}/helpers.cpp"
@@ -167,3 +170,10 @@ include(InstallConfiguration)
 include(PackConfiguration)
 
 target_link_libraries(numoria ${linked_libs})
+
+if ("${NUMORIA_CURSES}" STREQUAL "browser")
+    add_custom_command(
+        TARGET numoria POST_BUILD
+        COMMAND cp "${PROJECT_SOURCE_DIR}/src/numoria.html" "${build_dir}/numoria.html"
+    )
+endif ()
