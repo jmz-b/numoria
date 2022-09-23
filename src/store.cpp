@@ -136,12 +136,31 @@ static void displayStoreInventory(Store_t &store, int item_pos_start) {
         current_item_count = store.inventory[item_pos_start].cost;
 
         if (current_item_count <= 0) {
-            int32_t value = -current_item_count;
-            value = value * playerStatAdjustmentCharisma() / 100;
-            if (value <= 0) {
-                value = 1;
+            if (!config::options::auto_haggle) {
+                int32_t value = -current_item_count;
+                value = value * playerStatAdjustmentCharisma() / 100;
+                if (value <= 0) {
+                    value = 1;
+                }
+                (void) snprintf(msg, MORIA_OBJ_DESC_SIZE, "%9d", value);
+            } else {
+                int32_t start_ask, final_ask;
+                storeItemSellPrice(store, final_ask, start_ask, item);
+
+                start_ask = start_ask * playerStatAdjustmentCharisma() / 100;
+                if (start_ask <= 0) start_ask = 1;
+
+                final_ask = final_ask * playerStatAdjustmentCharisma() / 100;
+                if (final_ask <= 0) final_ask = 1;
+
+                if (!storeNoNeedToBargain(store, final_ask)) {
+                    /* Add sales tax to the final price */
+                    final_ask = final_ask + (final_ask * SALES_TAX) / 100;
+                    /* But don't exceed the normal asking price */
+                    if (final_ask > start_ask) final_ask = start_ask;
+                }
+                (void) snprintf(msg, MORIA_OBJ_DESC_SIZE, "%9d", final_ask);
             }
-            (void) snprintf(msg, MORIA_OBJ_DESC_SIZE, "%9d", value);
         } else {
             (void) snprintf(msg, MORIA_OBJ_DESC_SIZE, "%9d [Fixed]", current_item_count);
         }
@@ -409,6 +428,13 @@ static BidState storePurchaseHaggle(int store_id, int32_t &price, Inventory_t co
 
     storePurchaseCustomerAdjustment(min_sell, max_sell);
 
+    if (config::options::auto_haggle && !storeNoNeedToBargain(stores[store_id], min_sell)) {
+      /* Add sales tax to the final price */
+      min_sell = min_sell + (min_sell * SALES_TAX) / 100;
+      /* But don't exceed the normal asking price */
+      if (min_sell > max_sell) min_sell = max_sell;
+    }
+
     // cast max_inflate to signed so that subtraction works correctly
     int32_t max_buy = cost * (200 - (int) owner.max_inflate) / 100;
     if (max_buy <= 0) {
@@ -425,7 +451,7 @@ static BidState storePurchaseHaggle(int store_id, int32_t &price, Inventory_t co
     int offers_count = 0; // this prevents incremental haggling on first try
 
     // go right to final price if player has bargained well
-    if (storeNoNeedToBargain(stores[store_id], final_asking_price)) {
+    if (config::options::auto_haggle || storeNoNeedToBargain(stores[store_id], final_asking_price)) {
         printMessage("After a long bargaining session, you agree upon the price.");
         current_asking_price = min_sell;
         comment = "Final offer";
@@ -456,7 +482,16 @@ static BidState storePurchaseHaggle(int store_id, int32_t &price, Inventory_t co
             (void) snprintf(msg, MORIA_MESSAGE_SIZE, "%s :  %d", comment, current_asking_price);
             putString(msg, Coord_t{1, 0});
 
-            status = storeReceiveOffer(store_id, "What do you offer? ", new_offer, last_offer, offers_count, 1);
+            if (config::options::auto_haggle) {
+                if (getInputConfirmation("Confirm this purchase?")) {
+                    status = BidState::Received;
+                    new_offer = current_asking_price;
+                } else {
+                    status = BidState::Rejected;
+                }
+            } else {
+                status = storeReceiveOffer(store_id, "What do you offer? ", new_offer, last_offer, offers_count, 1);
+            }
 
             if (status != BidState::Received) {
                 rejected = true;
@@ -607,6 +642,13 @@ static BidState storeSellHaggle(int store_id, int32_t &price, Inventory_t const 
 
         storeSellCustomerAdjustment(owner, cost, min_buy, max_buy, max_sell);
 
+        if (config::options::auto_haggle && !storeNoNeedToBargain(stores[store_id], min_buy)) {
+            /* Subtract sales tax from the final price */
+            min_buy = min_buy - (min_buy * SALES_TAX) / 100;
+            /* But don't offer less than opening bid during haggling */
+            if (min_buy < max_buy) min_buy = max_buy;
+        }
+
         min_per = owner.haggles_per;
         max_per = min_per * 3;
         max_gold = owner.max_cost;
@@ -646,7 +688,7 @@ static BidState storeSellHaggle(int store_id, int32_t &price, Inventory_t const 
             comment = "Offer";
 
             // go right to final price if player has bargained well
-            if (storeNoNeedToBargain(stores[store_id], final_asking_price)) {
+            if (config::options::auto_haggle || storeNoNeedToBargain(stores[store_id], final_asking_price)) {
                 printMessage("After a long bargaining session, you agree upon the price.");
                 current_asking_price = final_asking_price;
                 comment = "Final offer";
@@ -677,7 +719,17 @@ static BidState storeSellHaggle(int store_id, int32_t &price, Inventory_t const 
                 (void) snprintf(msg, MORIA_MESSAGE_SIZE, "%s :  %d", comment, current_asking_price);
                 putString(msg, Coord_t{1, 0});
 
-                status = storeReceiveOffer(store_id, "What price do you ask? ", new_offer, last_offer, offer_count, -1);
+                if (config::options::auto_haggle) {
+                    if (getInputConfirmation("Confirm this sale?")) {
+                        status = BidState::Received;
+                        new_offer = current_asking_price;
+                    } else {
+                        status = BidState::Rejected;
+                    }
+                } else {
+                    status = storeReceiveOffer(store_id, "What price do you ask? ", new_offer, last_offer, offer_count, -1);
+                }
+
 
                 if (status != BidState::Received) {
                     rejected = true;
@@ -861,7 +913,7 @@ static bool storePurchaseAnItem(int store_id, int &current_top_item_id) {
                 InventoryRecord_t &store_item = store.inventory[item_id];
 
                 if (saved_store_counter == store.unique_items_counter) {
-                    if (store_item.cost < 0) {
+                    if (!config::options::auto_haggle && store_item.cost < 0) {
                         store_item.cost = price;
                         displaySingleCost(store_id, item_id);
                     }
