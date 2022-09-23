@@ -69,12 +69,14 @@ int displayInventoryItems(int itemIdStart, int itemIdEnd, bool weighted, int col
             continue;
         }
 
+        int color = itemColor(&py.inventory[i], false);
+
         // don't need first two spaces if in first column
         if (column == 0) {
-            putStringClearToEOL(descriptions[i], Coord_t{currentLine, column});
+            putStringClearToEOL(descriptions[i], Coord_t{currentLine, column}, color);
         } else {
             putString("  ", Coord_t{currentLine, column});
-            putStringClearToEOL(descriptions[i], Coord_t{currentLine, column + 2});
+            putStringClearToEOL(descriptions[i], Coord_t{currentLine, column + 2}, color);
         }
 
         if (weighted) {
@@ -212,12 +214,14 @@ int displayEquipment(bool showWeights, int column) {
             continue;
         }
 
+        int color = itemColor(&py.inventory[i], false);
+
         // don't need first two spaces when using whole screen
         if (column == 0) {
-            putStringClearToEOL(descriptions[line], Coord_t{line + 1, column});
+            putStringClearToEOL(descriptions[line], Coord_t{line + 1, column}, color);
         } else {
             putString("  ", Coord_t{line + 1, column});
-            putStringClearToEOL(descriptions[line], Coord_t{line + 1, column + 2});
+            putStringClearToEOL(descriptions[line], Coord_t{line + 1, column + 2}, color);
         }
 
         if (showWeights) {
