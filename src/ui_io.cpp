@@ -9,6 +9,11 @@
 #include "headers.h"
 #include "curses.h"
 
+#ifdef NUMORIA_GL
+#define PDC_GL_RESIZE_SCALE 2
+extern int pdc_resize_mode;
+#endif
+
 static bool curses_on = false;
 
 // Spare window for saving the screen. -CJS-
@@ -36,6 +41,10 @@ static void moriaTerminalInitialize() {
 // initializes the terminal / curses routines
 bool terminalInitialize() {
     initscr();
+
+#ifdef NUMORIA_GL
+    pdc_resize_mode = PDC_GL_RESIZE_SCALE;
+#endif
 
     // Check we have enough screen. -CJS-
     if (LINES < 24 || COLS < 80) {
