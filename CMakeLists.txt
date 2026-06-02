@@ -22,11 +22,62 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(numoria LANGUAGES CXX)
 
-set(PROJECT_VERSION "v0.1.0")
-set(PROJECT_VERSION_MAJOR "0")
-set(PROJECT_VERSION_MINOR "1")
-set(PROJECT_VERSION_PATCH "0")
-set(upstream_version "v5.7.15")
+# Bump this when NUmoria patches are amended or added.
+set(NUMORIA_REVISION 1)
+
+find_package(Git REQUIRED)
+
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe --tags upstream/master
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE upstream_git_describe
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE upstream_describe_result
+)
+if (NOT upstream_describe_result EQUAL 0)
+    message(FATAL_ERROR
+        "Could not run 'git describe --tags upstream/master'.\n"
+        "Make sure the upstream remote is configured and fetched:\n"
+        "  git remote add upstream https://github.com/dungeons-of-moria/umoria.git\n"
+        "  git fetch upstream"
+    )
+endif ()
+
+# Parse major.minor.patch from the tag for save-file compatibility constants.
+string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ "${upstream_git_describe}")
+set(upstream_version_major "${CMAKE_MATCH_1}")
+set(upstream_version_minor "${CMAKE_MATCH_2}")
+set(upstream_version_patch "${CMAKE_MATCH_3}")
+
+# Append branch name on non-release branches so dev builds are distinguishable.
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE current_branch
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if (current_branch STREQUAL "master")
+    set(NUMORIA_VERSION "${upstream_git_describe}+${NUMORIA_REVISION}")
+else ()
+    set(NUMORIA_VERSION "${upstream_git_describe}+${NUMORIA_REVISION} (${current_branch})")
+endif ()
+
+# Strip branch suffix for use in filenames and CPack.
+string(REGEX REPLACE " .*$" "" NUMORIA_VERSION_SAFE "${NUMORIA_VERSION}")
+
+message(STATUS "NUmoria version: ${NUMORIA_VERSION}")
+
+# Pre-compute a centered splash line for an 80-column terminal.
+set(version_label "NUmoria ${NUMORIA_VERSION}")
+string(LENGTH "${version_label}" version_label_len)
+math(EXPR version_pad "(80 - ${version_label_len}) / 2")
+set(NUMORIA_VERSION_LINE "")
+foreach(i RANGE 1 ${version_pad})
+    set(NUMORIA_VERSION_LINE "${NUMORIA_VERSION_LINE} ")
+endforeach()
+set(NUMORIA_VERSION_LINE "${NUMORIA_VERSION_LINE}${version_label}")
 
 string(TIMESTAMP current_date "%Y-%m-%d" UTC)
 

@@ -1,5 +1,4 @@
-                          NUmoria ${PROJECT_VERSION} (${current_date})
-                          Umoria ${upstream_version}
+                    NUmoria ${NUMORIA_VERSION} (${current_date})
 
 Previous major releases:
 

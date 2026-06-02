@@ -12,7 +12,7 @@
         ##    ##  #######  ##     ##  #######  ##     ## #### ##     ##
 
 
-                    NUmoria ${PROJECT_VERSION} based on Umoria ${upstream_version}
+${NUMORIA_VERSION_LINE}
 
 
                 NUmoria is free software released under GPL-3.0
