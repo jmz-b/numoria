@@ -1,0 +1,64 @@
+name: Upstream check
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/dcgibbons/umoria.git
+          git fetch upstream
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          new=$(git rev-list upstream/master --not origin/master --count)
+          echo "new_commits=$new" >> "$GITHUB_OUTPUT"
+          if [[ "$new" -gt 0 ]]; then
+            echo "Upstream has $new new commit(s):"
+            git log --oneline upstream/master --not origin/master
+          else
+            echo "Already up to date."
+          fi
+
+      - name: Open issue if upstream has advanced
+        if: steps.check.outputs.new_commits != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const count = '${{ steps.check.outputs.new_commits }}';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'upstream-sync',
+              state: 'open',
+            });
+            if (open.length > 0) {
+              console.log('Sync issue already open, skipping.');
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Upstream has ${count} new commit(s) - sync needed`,
+              labels: ['upstream-sync'],
+              body: [
+                `Upstream (dcgibbons/umoria) has advanced by **${count} commit(s)**.`,
+                '',
+                'To sync:',
+                '```sh',
+                'bash scripts/update.sh',
+                "git push --force-with-lease origin 'refs/heads/patch/*' master",
+                '```',
+              ].join('\n'),
+            });
