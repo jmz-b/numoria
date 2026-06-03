@@ -15,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create release with changelog
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: CHANGELOG.numoria.md
-          fail_on_unmatched_files: false
+        run: gh release create "${{ github.ref_name }}" --notes-file CHANGELOG.numoria.md
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   build-linux:
     needs: create-release
@@ -56,10 +55,9 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/*.tar.gz
-          fail_on_unmatched_files: true
+        run: gh release upload "${{ github.ref_name }}" build/*.tar.gz
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   build-windows:
     needs: create-release
@@ -92,7 +90,6 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/*.zip
-          fail_on_unmatched_files: true
+        run: gh release upload "${{ github.ref_name }}" build/*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
