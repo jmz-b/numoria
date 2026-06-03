@@ -8,13 +8,13 @@ set(PDC_INCLUDE_DIR ${PDC_PREFIX}/include)
 set(PDC_LIBRARIES ${PDC_PREFIX}/lib/libpdcurses.a)
 set(PDC_MAKE_OPTS WIDE=Y UTF8=Y)
 
-if ("${PDC_PLATFORM}" STREQUAL "sdl2")
+if ("${PDC_PORT}" STREQUAL "sdl2")
     set(PDC_BYPRODUCT libpdcurses.a)
     list(APPEND PDC_LIBRARIES  -lSDL2 -lSDL2_ttf)
-elseif ("${PDC_PLATFORM}" STREQUAL "gl")
+elseif ("${PDC_PORT}" STREQUAL "gl")
     set(PDC_BYPRODUCT libpdcurses.a)
     list(APPEND PDC_LIBRARIES  -lSDL2 -lSDL2_ttf -lGL)
-elseif ("${PDC_PLATFORM}" STREQUAL "wingui")
+elseif ("${PDC_PORT}" STREQUAL "wingui")
     set(PDC_BYPRODUCT pdcurses.a)
     list(APPEND PDC_MAKE_OPTS  _w64=1)
     list(APPEND PDC_LIBRARIES  -lgdi32 -lcomdlg32 -lwinmm)
@@ -30,7 +30,7 @@ ExternalProject_Add(
     CONFIGURE_COMMAND ""
 
     BUILD_IN_SOURCE ON
-    SOURCE_SUBDIR ${PDC_PLATFORM}
+    SOURCE_SUBDIR ${PDC_PORT}
 
     LIST_SEPARATOR " "
     BUILD_COMMAND ${MAKE_EXE} ${PDC_MAKE_OPTS} libs
