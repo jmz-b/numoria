@@ -23,7 +23,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(numoria LANGUAGES CXX)
 
 # Bump this when NUmoria patches are amended or added.
-set(NUMORIA_REVISION 2)
+set(NUMORIA_REVISION 3)
 
 find_package(Git REQUIRED)
 
@@ -208,6 +208,11 @@ endforeach ()
 set(resources ${data_files} ${support_files})
 
 # Also add resources to the target so they are visible in the IDE
+if (EMSCRIPTEN)
+    list(APPEND source_files "${source_dir}/browser_io.cpp")
+    list(APPEND source_files "${source_dir}/emscripten_getch.cpp")
+endif ()
+
 add_executable(numoria ${source_files} ${resources})
 
 include(CMakeOptions)
@@ -218,3 +223,7 @@ include(InstallConfiguration)
 include(PackConfiguration)
 
 target_link_libraries(numoria ${linked_libs})
+
+if (EMSCRIPTEN)
+    include(EmscriptenConfig)
+endif ()

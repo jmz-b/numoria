@@ -1,3 +1,8 @@
-set(NUMORIA_CURSES "ncurses" CACHE STRING "Select Curses implementation: ncurses, sdl2, gl, wingui")
-set(NUMORIA_PDC_PLATFORMS CACHE INTERNAL "sdl2" "gl" "wingui")
-message(STATUS "Using ${NUMORIA_CURSES} Curses implementation")
+set(NUMORIA_BACKEND "ncurses" CACHE STRING "Display library: ncurses, pdc")
+set(PDC_PORT "sdl2" CACHE STRING "PDCursesMod port (when NUMORIA_BACKEND=pdc): sdl2, gl, wingui")
+
+if ("${NUMORIA_BACKEND}" STREQUAL "pdc")
+    message(STATUS "Using pdc backend (${PDC_PORT} port)")
+else ()
+    message(STATUS "Using ${NUMORIA_BACKEND} backend")
+endif ()

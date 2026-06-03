@@ -53,10 +53,22 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 echo ""
-echo "Rebuilding master from dev..."
-TARGET_BRANCH=master bash "$(dirname "$(realpath "$0")")/rebuild-combined.sh"
 
-git checkout dev
+# Create a release commit on master that uses dev's tree but keeps the
+# previous master as its first parent, preserving linear release history.
+# dev is the second parent so the provenance is visible in git log --graph.
+DEV_HEAD="$(git rev-parse dev)"
+DEV_TREE="$(git rev-parse dev^{tree})"
+MASTER_HEAD="$(git rev-parse master 2>/dev/null || echo "")"
+
+if [[ -n "$MASTER_HEAD" ]]; then
+    NEW_COMMIT="$(git commit-tree "$DEV_TREE" -p "$MASTER_HEAD" -p "$DEV_HEAD" -m "Release $TAG")"
+else
+    NEW_COMMIT="$(git commit-tree "$DEV_TREE" -p "$DEV_HEAD" -m "Release $TAG")"
+fi
+
+git update-ref refs/heads/master "$NEW_COMMIT"
+echo "Created release commit on master"
 
 git tag "$TAG" master
 echo "Created tag '$TAG' on master"

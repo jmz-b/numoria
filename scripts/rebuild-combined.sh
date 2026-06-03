@@ -18,6 +18,7 @@ TARGET_BRANCH="${TARGET_BRANCH:-dev}"
 PATCHES=(
     patch/build-system
     patch/color-display
+    patch/emscripten
     patch/auto-haggle
     patch/lost-item-feedback
     patch/revocable-recall

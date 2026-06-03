@@ -4,6 +4,7 @@
 #
 # Dependency graph:
 #   upstream/master -> patch/build-system -> patch/color-display
+#                                         -> patch/emscripten
 #   upstream/master -> all other patches (standalone)
 
 set -euo pipefail
@@ -51,14 +52,17 @@ for branch in "${STANDALONE_PATCHES[@]}"; do
     echo "  -> ok"
 done
 
-echo "Rebasing patch/color-display onto patch/build-system..."
-if ! git rebase patch/build-system patch/color-display; then
-    echo ""
-    echo "CONFLICT during rebase of 'patch/color-display'."
-    echo "Resolve conflicts, run 'git rebase --continue', then re-run this script."
-    exit 1
-fi
-echo "  -> ok"
+for branch in patch/color-display patch/emscripten; do
+    git rev-parse "$branch" > /dev/null 2>&1 || { echo "SKIP: $branch (not found)"; continue; }
+    echo "Rebasing $branch onto patch/build-system..."
+    if ! git rebase patch/build-system "$branch"; then
+        echo ""
+        echo "CONFLICT during rebase of '$branch'."
+        echo "Resolve conflicts, run 'git rebase --continue', then re-run this script."
+        exit 1
+    fi
+    echo "  -> ok"
+done
 
 echo ""
 echo "All patch branches rebased successfully onto $UPSTREAM."

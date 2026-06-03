@@ -15,17 +15,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create release with changelog
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: CHANGELOG.numoria.md
-          fail_on_unmatched_files: false
+        run: gh release create "${{ github.ref_name }}" --notes-file CHANGELOG.numoria.md
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   build-linux:
     needs: create-release
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        backend: [ncurses, sdl2, gl]
+        include:
+          - label: ncurses
+            cmake_args: -DNUMORIA_BACKEND=ncurses
+          - label: sdl2
+            cmake_args: -DNUMORIA_BACKEND=pdc -DPDC_PORT=sdl2
+          - label: gl
+            cmake_args: -DNUMORIA_BACKEND=pdc -DPDC_PORT=gl
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +46,7 @@ jobs:
         run: sudo apt-get install -y libncurses-dev libsdl2-dev libsdl2-ttf-dev libgl-dev
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DNUMORIA_CURSES=${{ matrix.backend }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
 
       - name: Build
         run: cmake --build build --parallel
@@ -50,10 +55,9 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/*.tar.gz
-          fail_on_unmatched_files: true
+        run: gh release upload "${{ github.ref_name }}" build/*.tar.gz
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   build-windows:
     needs: create-release
@@ -76,7 +80,7 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DNUMORIA_CURSES=wingui \
+            -DNUMORIA_BACKEND=pdc -DPDC_PORT=wingui \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/mingw-w64-x86_64.cmake
 
       - name: Build
@@ -86,7 +90,39 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
+        run: gh release upload "${{ github.ref_name }}" build/*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build-web:
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
         with:
-          files: build/*.zip
-          fail_on_unmatched_files: true
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/dungeons-of-moria/umoria.git
+          git fetch upstream
+
+      - name: Install Emscripten
+        uses: emscripten-core/setup-emsdk@v14
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev fonts-dejavu-core
+
+      - name: Configure
+        run: emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Upload to release
+        run: |
+          cp build/numoria/numoria.html "numoria-${{ github.ref_name }}-web.html"
+          gh release upload "${{ github.ref_name }}" "numoria-${{ github.ref_name }}-web.html"
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -25,7 +25,7 @@ jobs:
         run: sudo apt-get install -y libncurses-dev
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DNUMORIA_BACKEND=ncurses
 
       - name: Build
         run: cmake --build build --parallel

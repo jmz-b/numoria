@@ -407,12 +407,20 @@ void printMessageNoCommandInterrupt(const std::string &msg) {
 // This silently consumes ^R to redraw the screen and reset the
 // terminal, so that this operation can always be performed at
 // any input prompt. getKeyInput() never returns ^R.
+#ifdef __EMSCRIPTEN__
+extern "C" int js_getch();
+#endif
+
 char getKeyInput() {
     putQIO();               // Dump IO buffer
     game.command_count = 0; // Just to be safe -CJS-
 
     while (true) {
+#ifdef __EMSCRIPTEN__
+        int ch = js_getch();
+#else
         int ch = getch();
+#endif
 
         // some machines may not sign extend.
         if (ch == EOF) {
@@ -602,7 +610,10 @@ void waitForContinueKey(int line_number) {
 // a certain point, sleep for a second. There would need to be a way of resetting
 // the count, with a call made for commands like run or rest.
 bool checkForNonBlockingKeyPress(int microseconds) {
-#ifdef _WIN32
+#ifdef __EMSCRIPTEN__
+    (void) microseconds;
+    return false;
+#elif defined(_WIN32)
     (void) microseconds;
 
     // Ugly non-blocking read...Ugh! -MRC-
@@ -737,7 +748,7 @@ bool tilde(const char *file, char *expanded) {
 // Check user permissions on Unix based systems,
 // or if on Windows just return. -MRC-
 bool checkFilePermissions() {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
     if (0 != setuid(getuid())) {
         perror("Can't set permissions correctly!  Setuid call failed.\n");
         return false;
