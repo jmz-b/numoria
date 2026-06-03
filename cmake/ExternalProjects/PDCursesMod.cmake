@@ -32,7 +32,6 @@ ExternalProject_Add(
     BUILD_IN_SOURCE ON
     SOURCE_SUBDIR ${PDC_PORT}
 
-    LIST_SEPARATOR " "
     BUILD_COMMAND ${MAKE_EXE} ${PDC_MAKE_OPTS} libs
     BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libpdcurses.a
 
