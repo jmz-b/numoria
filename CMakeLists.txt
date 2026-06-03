@@ -23,7 +23,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(numoria LANGUAGES CXX)
 
 # Bump this when NUmoria patches are amended or added.
-set(NUMORIA_REVISION 2)
+set(NUMORIA_REVISION 3)
 
 find_package(Git REQUIRED)
 
