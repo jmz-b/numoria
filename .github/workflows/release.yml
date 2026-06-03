@@ -9,7 +9,19 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create release with changelog
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.numoria.md
+          fail_on_unmatched_files: false
+
   build-linux:
+    needs: create-release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -44,6 +56,7 @@ jobs:
           fail_on_unmatched_files: true
 
   build-windows:
+    needs: create-release
     runs-on: ubuntu-latest
 
     steps:

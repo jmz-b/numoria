@@ -100,6 +100,17 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 - Options are on by default, can be disabled in `=` menu
 
 
+## Show monster kill count on death screen
+
+- Displays the total number of monsters slain on the gravestone
+
+
+## Highlight staircases in yellow
+
+- Staircases (`<` and `>`) are now drawn in light yellow, making them
+  easy to spot in the dungeon
+
+
 ## Add OpenGL backend
 
 - Add `gl` as a new `NUMORIA_CURSES` option, using PDCursesMod's OpenGL
@@ -117,7 +128,7 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 
 - Add support for more Curses implementations, configurable with
   `NUMORIA_CURSES` cmake variable. Currently supported options are:
-  `ncurses`, `sdl2`, `gl` and `wingui`
+  `ncurses`, `sdl2` and `wingui`
 
 - Setting `NUMORIA_CURSES` to any other value (eg. `curses`) will try
   and use whatever Curses implementation is available on the system

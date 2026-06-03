@@ -29,6 +29,7 @@ BRANCHES=(
     patch/wizard-summon
     patch/full-monster-recall
     patch/auto-open-doors
+    patch/death-screen
     patch/numoria-docs
     patch/maintenance-scripts
     dev
