@@ -93,3 +93,36 @@ jobs:
         run: gh release upload "${{ github.ref_name }}" build/*.zip
         env:
           GH_TOKEN: ${{ github.token }}
+
+  build-web:
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/dungeons-of-moria/umoria.git
+          git fetch upstream
+
+      - name: Install Emscripten
+        uses: emscripten-core/setup-emsdk@v14
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev fonts-dejavu-core
+
+      - name: Configure
+        run: emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Upload to release
+        run: |
+          cp build/numoria/numoria.html "numoria-${{ github.ref_name }}-web.html"
+          gh release upload "${{ github.ref_name }}" "numoria-${{ github.ref_name }}-web.html"
+        env:
+          GH_TOKEN: ${{ github.token }}
