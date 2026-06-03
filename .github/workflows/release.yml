@@ -55,7 +55,7 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        run: gh release upload "${{ github.ref_name }}" build/*.tar.gz
+        run: gh release upload --repo "${{ github.repository }}" "${{ github.ref_name }}" build/*.tar.gz
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -90,7 +90,7 @@ jobs:
         run: cmake --build build --target package
 
       - name: Upload to release
-        run: gh release upload "${{ github.ref_name }}" build/*.zip
+        run: gh release upload --repo "${{ github.repository }}" "${{ github.ref_name }}" build/*.zip
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -123,6 +123,6 @@ jobs:
       - name: Upload to release
         run: |
           cp build/numoria/numoria.html "numoria-${{ github.ref_name }}-web.html"
-          gh release upload "${{ github.ref_name }}" "numoria-${{ github.ref_name }}-web.html"
+          gh release upload --repo "${{ github.repository }}" "${{ github.ref_name }}" "numoria-${{ github.ref_name }}-web.html"
         env:
           GH_TOKEN: ${{ github.token }}
