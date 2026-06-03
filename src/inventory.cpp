@@ -18,8 +18,12 @@ uint32_t inventoryCollectAllItemFlags() {
 }
 
 // Destroy an item in the inventory -RAK-
-void inventoryDestroyItem(int item_id) {
+void inventoryDestroyItem(int item_id, const char *msg) {
+    obj_desc_t long_desc = {'\0'};
+    obj_desc_t long_msg = {'\0'};
     Inventory_t &item = py.inventory[item_id];
+
+    itemDescription(long_desc, item, true);;
 
     if (item.items_count > 1 && item.sub_category_id <= ITEM_SINGLE_STACK_MAX) {
         item.items_count--;
@@ -36,6 +40,11 @@ void inventoryDestroyItem(int item_id) {
     }
 
     py.flags.status |= config::player::status::PY_STR_WGT;
+    if (msg[0] != '\0') {
+        (void) sprintf(long_msg, "You lost %s", long_desc);
+        printMessage(msg);
+        printMessage(long_msg);
+    }
 }
 
 // Copies the object in the second argument over the first argument.
@@ -91,12 +100,12 @@ void inventoryDropItem(int item_id, bool drop_all) {
 }
 
 // Destroys a type of item on a given percent chance -RAK-
-static int inventoryDamageItem(bool (*item_type)(Inventory_t *), int chance_percentage) {
+static int inventoryDamageItem(bool (*item_type)(Inventory_t *), int chance_percentage, const char * msg) {
     int damage = 0;
 
     for (int i = 0; i < py.pack.unique_items; i++) {
         if ((*item_type)(&py.inventory[i]) && randomNumber(100) < chance_percentage) {
-            inventoryDestroyItem(i);
+            inventoryDestroyItem(i, msg);
             damage++;
         }
     }
@@ -647,9 +656,7 @@ void damageCorrodingGas(const char *creature_name) {
         playerTakesHit(randomNumber(8), creature_name);
     }
 
-    if (inventoryDamageItem(setCorrodableItems, 5) > 0) {
-        printMessage("There is an acrid smell coming from your pack.");
-    }
+    (void) inventoryDamageItem(setCorrodableItems, 5, "There is an acrid smell coming from your pack.");
 }
 
 // Poison gas the idiot. -RAK-
@@ -671,9 +678,7 @@ void damageFire(int damage, const char *creature_name) {
 
     playerTakesHit(damage, creature_name);
 
-    if (inventoryDamageItem(setFlammableItems, 3) > 0) {
-        printMessage("There is smoke coming from your pack!");
-    }
+    (void) inventoryDamageItem(setFlammableItems, 3, "There is smoke coming from your pack!");
 }
 
 // Freeze them to death. -RAK-
@@ -688,9 +693,7 @@ void damageCold(int damage, const char *creature_name) {
 
     playerTakesHit(damage, creature_name);
 
-    if (inventoryDamageItem(setFrostDestroyableItems, 5) > 0) {
-        printMessage("Something shatters inside your pack!");
-    }
+    (void) inventoryDamageItem(setFrostDestroyableItems, 5, "Something shatters inside your pack!");
 }
 
 // Lightning bolt the sucker away. -RAK-
@@ -701,9 +704,7 @@ void damageLightningBolt(int damage, const char *creature_name) {
 
     playerTakesHit(damage, creature_name);
 
-    if (inventoryDamageItem(setLightningDestroyableItems, 3) > 0) {
-        printMessage("There are sparks coming from your pack!");
-    }
+    (void) inventoryDamageItem(setLightningDestroyableItems, 3, "There are sparks coming from your pack!");
 }
 
 // Throw acid on the hapless victim -RAK-
@@ -720,7 +721,5 @@ void damageAcid(int damage, const char *creature_name) {
 
     playerTakesHit(damage / (flag + 1), creature_name);
 
-    if (inventoryDamageItem(setAcidAffectedItems, 3) > 0) {
-        printMessage("There is an acrid smell coming from your pack!");
-    }
+    (void) inventoryDamageItem(setAcidAffectedItems, 3, "There is an acrid smell coming from your pack!");
 }
