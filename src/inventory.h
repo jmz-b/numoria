@@ -76,7 +76,7 @@ enum PlayerEquipment {
 
 uint32_t inventoryCollectAllItemFlags();
 
-void inventoryDestroyItem(int item_id);
+void inventoryDestroyItem(int item_id, const char *msg = "");
 void inventoryTakeOneItem(Inventory_t *to_item, Inventory_t *from_item);
 void inventoryDropItem(int item_id, bool drop_all);
 bool inventoryDiminishLightAttack(bool noticed);
