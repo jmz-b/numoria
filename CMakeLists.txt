@@ -208,6 +208,11 @@ endforeach ()
 set(resources ${data_files} ${support_files})
 
 # Also add resources to the target so they are visible in the IDE
+if (EMSCRIPTEN)
+    list(APPEND source_files "${source_dir}/browser_io.cpp")
+    list(APPEND source_files "${source_dir}/emscripten_getch.cpp")
+endif ()
+
 add_executable(numoria ${source_files} ${resources})
 
 include(CMakeOptions)
@@ -218,3 +223,7 @@ include(InstallConfiguration)
 include(PackConfiguration)
 
 target_link_libraries(numoria ${linked_libs})
+
+if (EMSCRIPTEN)
+    include(EmscriptenConfig)
+endif ()
