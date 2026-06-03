@@ -39,6 +39,7 @@ namespace config {
         extern bool draw_solid_walls;
         extern bool auto_haggle;
         extern bool full_monster_recall;
+        extern bool auto_open_door;
     }
 
     namespace dungeon {
