@@ -448,8 +448,8 @@ DungeonObject_t game_objects[MAX_OBJECTS_IN_GAME] = {
     // end doors
 
     // stairs
-    {"an up staircase",               0x00000000L, TV_UP_STAIR,     '<', 0, 0, 1, 1, 0, 0, 0, 0, 0, {1, 1}, 0, Color_Wooden}, // 370
-    {"a down staircase",              0x00000000L, TV_DOWN_STAIR,   '>', 0, 0, 1, 1, 0, 0, 0, 0, 0, {1, 1}, 0, Color_Wooden}, // 371
+    {"an up staircase",               0x00000000L, TV_UP_STAIR,     '<', 0, 0, 1, 1, 0, 0, 0, 0, 0, {1, 1}, 0, Color_Light_Yellow}, // 370
+    {"a down staircase",              0x00000000L, TV_DOWN_STAIR,   '>', 0, 0, 1, 1, 0, 0, 0, 0, 0, {1, 1}, 0, Color_Light_Yellow}, // 371
 
     // store door
     // Stores are just special traps
