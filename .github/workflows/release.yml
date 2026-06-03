@@ -25,7 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        backend: [ncurses, sdl2, gl]
+        include:
+          - label: ncurses
+            cmake_args: -DNUMORIA_BACKEND=ncurses
+          - label: sdl2
+            cmake_args: -DNUMORIA_BACKEND=pdc -DPDC_PORT=sdl2
+          - label: gl
+            cmake_args: -DNUMORIA_BACKEND=pdc -DPDC_PORT=gl
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +47,7 @@ jobs:
         run: sudo apt-get install -y libncurses-dev libsdl2-dev libsdl2-ttf-dev libgl-dev
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DNUMORIA_CURSES=${{ matrix.backend }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
 
       - name: Build
         run: cmake --build build --parallel
@@ -76,7 +82,7 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DNUMORIA_CURSES=wingui \
+            -DNUMORIA_BACKEND=pdc -DPDC_PORT=wingui \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/mingw-w64-x86_64.cmake
 
       - name: Build
