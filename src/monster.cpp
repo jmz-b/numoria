@@ -1654,8 +1654,7 @@ static bool executeAttackOnPlayer(uint8_t creature_level, int16_t &monster_hp, i
             if (py.flags.paralysis < 1 && randomNumber(124) < py.stats.used[PlayerAttr::A_DEX]) {
                 printMessage("You grab hold of your backpack!");
             } else {
-                inventoryDestroyItem(randomNumber(py.pack.unique_items) - 1);
-                printMessage("Your backpack feels lighter.");
+                inventoryDestroyItem(randomNumber(py.pack.unique_items) - 1, "Your backpack feels lighter.");
             }
             if (randomNumber(2) == 1) {
                 printMessage("There is a puff of smoke!");
@@ -1720,8 +1719,7 @@ static bool executeAttackOnPlayer(uint8_t creature_level, int16_t &monster_hp, i
             break;
         case 22: // Eat food
             if (inventoryFindRange(TV_FOOD, TV_NEVER, item_pos_start, item_pos_end)) {
-                inventoryDestroyItem(item_pos_start);
-                printMessage("It got at your rations!");
+                inventoryDestroyItem(item_pos_start, "It got at your rations!");
             } else {
                 noticed = false;
             }
