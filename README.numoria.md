@@ -49,12 +49,14 @@ See `CHANGELOG.numoria.md` for a more complete list of changes.
 
 ## Compiling NUmoria
 
-NUmoria offers are variety of Curses frontend builds.
+NUmoria supports several display backends, selected with `-DNUMORIA_BACKEND`.
 
-  - `ncurses`: Console frontend
-  - `sdl2`: SDL2 window frontend
-  - `gl`: OpenGL 3.3 window frontend (supports fullscreen scaling)
-  - `wingui`: Win32 graphics mode
+  - `ncurses`: Console frontend (default)
+  - `pdc`: PDCursesMod frontend, port selected with `-DPDC_PORT`:
+    - `sdl2`: SDL2 window
+    - `gl`: OpenGL 3.3 window (supports fullscreen scaling)
+    - `wingui`: Win32 graphics mode
+  - Emscripten: web build via `emcmake cmake` (automatically uses SDL2 port)
 
 Building has only been tested on Linux. Windows binaries are cross-compiled
 using `mingw-w64`. Builds have not been tested on MacOS.
@@ -70,7 +72,7 @@ apt install cmake libncurses-dev
 - Build:
 
 ```sh
-cmake -DNUMORIA_CURSES=ncurses -B 'build/numoria-ncurses/' -S .
+cmake -DNUMORIA_BACKEND=ncurses -B 'build/numoria-ncurses/' -S .
 cmake --build 'build/numoria-ncurses/'
 ```
 
@@ -91,7 +93,7 @@ apt install git cmake libsdl2-dev libsdl2-ttf-dev
 - Build:
 
 ```sh
-cmake -DNUMORIA_CURSES=sdl2 -B 'build/numoria-sdl2/' -S .
+cmake -DNUMORIA_BACKEND=pdc -DPDC_PORT=sdl2 -B 'build/numoria-sdl2/' -S .
 cmake --build 'build/numoria-sdl2/'
 ```
 
@@ -112,7 +114,7 @@ apt install git cmake libsdl2-dev libsdl2-ttf-dev libgl-dev
 - Build:
 
 ```sh
-cmake -DNUMORIA_CURSES=gl -B 'build/numoria-gl/' -S .
+cmake -DNUMORIA_BACKEND=pdc -DPDC_PORT=gl -B 'build/numoria-gl/' -S .
 cmake --build 'build/numoria-gl/'
 ```
 
@@ -133,7 +135,7 @@ apt install git cmake mingw-w64
 - Build:
 
 ```sh
-cmake -DNUMORIA_CURSES=wingui -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/mingw-w64-x86_64.cmake -B 'build/numoria-wingui/' -S .
+cmake -DNUMORIA_BACKEND=pdc -DPDC_PORT=wingui -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/mingw-w64-x86_64.cmake -B 'build/numoria-wingui/' -S .
 cmake --build 'build/numoria-wingui/'
 ```
 
@@ -141,6 +143,29 @@ cmake --build 'build/numoria-wingui/'
 
 ```sh
 cmake --build 'build/numoria-wingui/' --target package
+```
+
+### Building for the web (Emscripten)
+
+- Install [emsdk](https://emscripten.org/docs/getting_started/downloads.html) and activate it
+
+- Install build dependencies, eg:
+
+```sh
+apt install git cmake libsdl2-dev libsdl2-ttf-dev
+```
+
+- Build (emcmake detects Emscripten automatically, no -DNUMORIA_BACKEND needed):
+
+```sh
+emcmake cmake -B 'build/numoria-web/' -S .
+cmake --build 'build/numoria-web/'
+```
+
+- Serve locally and open in a browser:
+
+```sh
+cd build/numoria-web/numoria && python3 -m http.server 8080
 ```
 
 ## Notes

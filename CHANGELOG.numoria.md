@@ -100,6 +100,15 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 - Options are on by default, can be disabled in `=` menu
 
 
+## Add Emscripten web build
+
+- The game can be compiled to WebAssembly using `emcmake cmake`
+
+- Runs in any modern browser that supports ASYNCIFY (Chrome, Firefox)
+
+- Saves persist between sessions via IndexedDB
+
+
 ## Show monster kill count on death screen
 
 - Displays the total number of monsters slain on the gravestone
