@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - 'patch/**'
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/dungeons-of-moria/umoria.git
+          git fetch upstream
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libncurses-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DNUMORIA_BACKEND=ncurses
+
+      - name: Build
+        run: cmake --build build --parallel
