@@ -52,6 +52,13 @@ static void printTomb() {
     text = std::string(day);
     putString(text.c_str(), Coord_t{17, (int) (26 - text.length() / 2)});
 
+    int total_kills = 0;
+    for (int i = 0; i < MON_MAX_CREATURES; i++) {
+        total_kills += creature_recall[i].kills;
+    }
+    text = std::to_string(total_kills) + " kills";
+    putString(text.c_str(), Coord_t{18, (int) (26 - text.length() / 2)});
+
 retry:
     flushInputBuffer();
 
