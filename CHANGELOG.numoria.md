@@ -100,6 +100,16 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 - Options are on by default, can be disabled in `=` menu
 
 
+## Add OpenGL backend
+
+- Add `gl` as a new `NUMORIA_CURSES` option, using PDCursesMod's OpenGL
+  3.3 backend
+
+- Set `pdc_resize_mode = PDC_GL_RESIZE_SCALE` after `initscr()` so that
+  the game content scales to fill the window when fullscreened, with
+  black bars to preserve aspect ratio
+
+
 ## Rewrite CMake build system
 
 - Split `CMakeLists.txt` into multiple files with (hopefully) logical

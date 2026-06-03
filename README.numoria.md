@@ -52,8 +52,9 @@ See `CHANGELOG.numoria.md` for a more complete list of changes.
 NUmoria offers are variety of Curses frontend builds.
 
   - `ncurses`: Console frontend
-  - `sdl2`: SDL2 Window frontend
-  - `wingui`: Win32 Graphics mode
+  - `sdl2`: SDL2 window frontend
+  - `gl`: OpenGL 3.3 window frontend (supports fullscreen scaling)
+  - `wingui`: Win32 graphics mode
 
 Building has only been tested on Linux. Windows binaries are cross-compiled
 using `mingw-w64`. Builds have not been tested on MacOS.
@@ -79,7 +80,7 @@ cmake --build 'build/numoria-ncurses/'
 cmake --build 'build/numoria-ncurses/' --target package
 ```
 
-### Compling with sdl2
+### Compiling with sdl2
 
 - Install build dependencies, eg:
 
@@ -98,6 +99,27 @@ cmake --build 'build/numoria-sdl2/'
 
 ```sh
 cmake --build 'build/numoria-sdl2/' --target package
+```
+
+### Compiling with gl
+
+- Install build dependencies, eg:
+
+```sh
+apt install git cmake libsdl2-dev libsdl2-ttf-dev libgl-dev
+```
+
+- Build:
+
+```sh
+cmake -DNUMORIA_CURSES=gl -B 'build/numoria-gl/' -S .
+cmake --build 'build/numoria-gl/'
+```
+
+- Package tarball:
+
+```sh
+cmake --build 'build/numoria-gl/' --target package
 ```
 
 ### Cross-compiling with wingui
