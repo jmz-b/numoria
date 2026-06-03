@@ -7,8 +7,20 @@ set(PDC_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/pdcurses)
 set(PDC_INCLUDE_DIR ${PDC_PREFIX}/include)
 set(PDC_LIBRARIES ${PDC_PREFIX}/lib/libpdcurses.a)
 set(PDC_MAKE_OPTS WIDE=Y UTF8=Y)
+set(PDC_BUILD_COMMAND ${MAKE_EXE} ${PDC_MAKE_OPTS} libs)
 
-if ("${PDC_PORT}" STREQUAL "sdl2")
+if (EMSCRIPTEN)
+    find_program(EMCC_EXECUTABLE NAMES emcc
+        HINTS "$ENV{EMSDK}/upstream/emscripten" REQUIRED)
+    find_program(EMAR_EXECUTABLE NAMES emar
+        HINTS "$ENV{EMSDK}/upstream/emscripten" REQUIRED)
+    set(PDC_BYPRODUCT libpdcurses.a)
+    set(PDC_BUILD_COMMAND
+        ${MAKE_EXE} WIDE=Y UTF8=Y "CC=${EMCC_EXECUTABLE}"
+        "SFLAGS=-s USE_SDL=2 -s USE_SDL_TTF=2"
+        TFLAGS= TLIBS= SLIBS= "AR=${EMAR_EXECUTABLE}" libs
+    )
+elseif ("${PDC_PORT}" STREQUAL "sdl2")
     set(PDC_BYPRODUCT libpdcurses.a)
     list(APPEND PDC_LIBRARIES  -lSDL2 -lSDL2_ttf)
 elseif ("${PDC_PORT}" STREQUAL "gl")
@@ -32,7 +44,7 @@ ExternalProject_Add(
     BUILD_IN_SOURCE ON
     SOURCE_SUBDIR ${PDC_PORT}
 
-    BUILD_COMMAND ${MAKE_EXE} ${PDC_MAKE_OPTS} libs
+    BUILD_COMMAND ${PDC_BUILD_COMMAND}
     BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libpdcurses.a
 
     INSTALL_COMMAND
