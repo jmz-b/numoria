@@ -37,6 +37,7 @@ KNOWN_CONFLICT_FILES=(
     src/config.h
     src/game.cpp
     src/game_save.cpp
+    src/wizard.h
 )
 
 die() { echo "ERROR: $*" >&2; exit 1; }
