@@ -10,10 +10,8 @@
 
 // Types used by the color routines
 typedef struct {
-  int16_t i;  // allocation order
-  uint8_t R;  // The full RGB specification for the color
-  uint8_t G;  // for those players with 24 bit displays
-  uint8_t B;  // (lucky so-and-so's...)
+  int16_t i;     // allocation order
+  int16_t slot;  // xterm 256-colour slot (16-255); see scripts/256colres.pl
 } Color_t;
 
 /* Greys */
