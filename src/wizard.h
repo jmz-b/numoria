@@ -11,9 +11,11 @@ void wizardDropRandomItems();
 void wizardJumpLevel();
 void wizardGainExperience();
 void wizardSummonMonster();
+void wizardSummonRandomMonster();
 void wizardLightUpDungeon();
 void wizardCharacterAdjustment();
 void wizardGenerateObject();
 void wizardCreateObjects();
 
 void wizardColorTest();
+bool wizardRequestObjectId(int &id, const std::string &label, int start_id, int end_id);

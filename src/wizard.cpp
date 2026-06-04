@@ -109,8 +109,23 @@ void wizardGainExperience() {
     displayCharacterExperience();
 }
 
-// Summon a random monster
+// Summon a monster
 void wizardSummonMonster() {
+    int id;
+    if (!wizardRequestObjectId(id, "Creature object", 0, MON_MAX_CREATURES)) {
+        return;
+    }
+
+    Coord_t coord = Coord_t{py.pos.y, py.pos.x};
+
+    (void) placeMonsterAdjacentTo(id, coord, false);
+
+    updateMonsters(false);
+}
+
+// Summon a random monster
+void wizardSummonRandomMonster() {
+
     Coord_t coord = Coord_t{py.pos.y, py.pos.x};
 
     (void) monsterSummon(coord, true);
@@ -352,7 +367,7 @@ void wizardCharacterAdjustment() {
 }
 
 // Request user input to get the array index of the `game_objects[]`
-static bool wizardRequestObjectId(int &id, const std::string &label, int start_id, int end_id) {
+bool wizardRequestObjectId(int &id, const std::string &label, int start_id, int end_id) {
     std::ostringstream id_str;
     id_str << start_id << "-" << end_id;
 

@@ -186,7 +186,7 @@ void monsterPlaceNewWithinDistance(int number, int distance_from_source, bool sl
     }
 }
 
-static bool placeMonsterAdjacentTo(int monster_id, Coord_t &coord, bool slp) {
+bool placeMonsterAdjacentTo(int monster_id, Coord_t &coord, bool slp) {
     bool placed = false;
 
     Coord_t position = Coord_t{0, 0};
