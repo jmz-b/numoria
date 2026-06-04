@@ -569,3 +569,106 @@ void wizardCreateObjects() {
         printMessage("Aborted.");
     }
 }
+
+// Displays all game colours across paginated pages, with a final animated
+// effects page. Press space/enter to advance, q/escape/~ to exit.
+void wizardColorTest() {
+    static const struct { int color; const char *name; } effects[] = {
+        {Color_Fire,             "Fire            "},
+        {Color_Lightning,        "Lightning       "},
+        {Color_Glowing,          "Glowing         "},
+        {Color_Shadow_And_Flame, "Shadow+Flame    "},
+        {Color_Random,           "Random          "},
+    };
+    const int effects_n = (int)(sizeof(effects) / sizeof(effects[0]));
+
+    // Name table derived from the X-macro in index order (0..MAX_COLORS-1).
+    static const char *const names[MAX_COLORS] = {
+#define NUMORIA_MAKE_COLOR_NAME(n, idx) #n,
+        NUMORIA_COLOR_LIST(NUMORIA_MAKE_COLOR_NAME)
+#undef NUMORIA_MAKE_COLOR_NAME
+    };
+
+    // Exclude animated colours from static pages -- derived from effects[] to avoid duplication.
+    auto is_animated = [&](int color_i) -> bool {
+        for (int e = 0; e < effects_n; e++) {
+            if (effects[e].color == color_i) return true;
+        }
+        return false;
+    };
+
+    int static_indices[MAX_COLORS];
+    int static_count = 0;
+    for (int i = 0; i < MAX_COLORS; i++) {
+        if (!is_animated(colors[i].i)) static_indices[static_count++] = i;
+    }
+
+    // Two columns of 22 rows = 44 colours per page
+    const int ROWS_PER_PAGE = 22;
+    const int PER_PAGE = ROWS_PER_PAGE * 2;
+    const int colour_pages = (static_count + PER_PAGE - 1) / PER_PAGE;
+    const int total_pages  = colour_pages + 1; // +1 for effects page
+
+    terminalSaveScreen();
+    clearScreen();
+
+    int page = 0;
+    bool done = false;
+
+    while (!done) {
+        clearScreen();
+
+        if (page < colour_pages) {
+            vtype_t header = {'\0'};
+            (void) snprintf(header, MORIA_MESSAGE_SIZE,
+                "Colours -- page %d/%d  (space=next  q=quit)", page + 1, total_pages);
+            putStringClearToEOL(header, Coord_t{0, 0});
+
+            int start = page * PER_PAGE;
+            int end   = start + PER_PAGE;
+            if (end > static_count) end = static_count;
+
+            for (int j = start; j < end; j++) {
+                int i   = static_indices[j];
+                int idx = j - start;
+                int row = 1 + (idx % ROWS_PER_PAGE);
+                int col = (idx / ROWS_PER_PAGE) * 40;
+                putString(names[colors[i].i] ? names[colors[i].i] : "?",
+                          Coord_t{row, col}, colors[i].i);
+            }
+            putQIO();
+
+            char k = getKeyInput();
+            if (k == 'q' || k == ESCAPE || k == '~') {
+                done = true;
+            } else {
+                page++;
+                if (page >= total_pages) done = true;
+            }
+        } else {
+            // Animated effects page
+            while (true) {
+                vtype_t header = {'\0'};
+                (void) snprintf(header, MORIA_MESSAGE_SIZE,
+                    "Effects -- page %d/%d  (any key=quit)", total_pages, total_pages);
+                putStringClearToEOL(header, Coord_t{0, 0});
+
+                for (int i = 0; i < effects_n; i++) {
+                    putString(effects[i].name, Coord_t{2 + i,  0}, effects[i].color);
+                    putString(effects[i].name, Coord_t{2 + i, 20}, effects[i].color);
+                    putString(effects[i].name, Coord_t{2 + i, 40}, effects[i].color);
+                }
+                putQIO();
+
+                if (checkForNonBlockingKeyPress(80000)) {
+                    done = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    terminalRestoreScreen();
+    drawDungeonPanel();
+}
+

@@ -15,3 +15,5 @@ void wizardLightUpDungeon();
 void wizardCharacterAdjustment();
 void wizardGenerateObject();
 void wizardCreateObjects();
+
+void wizardColorTest();
