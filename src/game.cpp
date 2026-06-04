@@ -133,6 +133,7 @@ static struct {
     {"Display rest/repeat counts", &config::options::display_counts},
     {"Show colors", &config::options::use_colors},
     {"Draw solid walls", &config::options::draw_solid_walls},
+    {"Auto-haggle", &config::options::auto_haggle},
     {nullptr, nullptr},
 };
 
