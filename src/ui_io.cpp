@@ -54,20 +54,17 @@ bool terminalInitialize() {
     } else {
         start_color();
 
-        for (int i = 0; i < MAX_COLORS; i++) {
-            Color_t color_obj = colors[i];
+        if (COLORS < 256) {
+            config::options::use_colors = false;
+            config::options::draw_solid_walls = false;
+        } else {
+            int wall_slot = colors[Color_Wall].slot;
 
-            int color = color_obj.i + 9;
-            int pair_no_bg = color_obj.i + 1;
-            int pair_bg = color_obj.i + MAX_COLORS;
-
-            int red = (color_obj.R * 1000) / 255;
-            int green = (color_obj.G * 1000) / 255;
-            int blue = (color_obj.B * 1000) / 255;
-
-            init_color(color, red, green, blue);
-            init_pair(pair_no_bg, color, COLOR_BLACK);
-            init_pair(pair_bg, color, Color_Wall + 9);
+            for (int i = 0; i < MAX_COLORS; i++) {
+                Color_t c = colors[i];
+                init_pair(c.i + 1,          c.slot, 16);
+                init_pair(c.i + MAX_COLORS, c.slot, wall_slot);
+            }
         }
     }
 

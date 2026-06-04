@@ -1628,6 +1628,10 @@ static void doWizardCommands(char command) {
             // NOTE: every field from the struct needs to be filled correctly
             wizardCreateObjects();
             break;
+        case '~':
+            // Colour test screen
+            wizardColorTest();
+            break;
         default:
             if (config::options::use_roguelike_keys) {
                 putStringClearToEOL("Type '?' or '\\' for help.", Coord_t{0, 0});

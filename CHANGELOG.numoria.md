@@ -99,6 +99,15 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 
 - Options are on by default, can be disabled in `=` menu
 
+- Staircases (`<` and `>`) drawn in light yellow for easy visibility
+
+- Fixed colour rendering in ncurses terminals: colours are now mapped
+  to fixed xterm 256-colour slots rather than using `init_color()`,
+  which is silently ignored for slots 16+ on terminals such as Konsole
+
+- Added wizard colour test (`~` in wizard mode) showing all game
+  colours by name across pages, with a final animated effects page
+
 
 ## Add Emscripten web build
 
@@ -112,12 +121,6 @@ Original patch found at: https://www.geocities.ws/lhelgeland/umoria.html
 ## Show monster kill count on death screen
 
 - Displays the total number of monsters slain on the gravestone
-
-
-## Highlight staircases in yellow
-
-- Staircases (`<` and `>`) are now drawn in light yellow, making them
-  easy to spot in the dungeon
 
 
 ## Add OpenGL backend
