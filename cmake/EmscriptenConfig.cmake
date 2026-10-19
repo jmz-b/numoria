@@ -43,7 +43,7 @@ set(em_link_flags
     "-sASYNCIFY_STACK_SIZE=1048576"
     "-sENVIRONMENT=web"
     "-sEXIT_RUNTIME=1"
-    "-sEXPORTED_FUNCTIONS=_main,_setSavePath"
+    "-sEXPORTED_FUNCTIONS=_main,_setSavePath,_browserForceRedraw"
     "-sEXPORTED_RUNTIME_METHODS=ccall,callMain"
     "-sINVOKE_RUN=0"
     "-sSINGLE_FILE=1"
@@ -51,6 +51,7 @@ set(em_link_flags
     "-sUSE_SDL_TTF=2"
     "-sALLOW_MEMORY_GROWTH=1"
     "--pre-js ${PROJECT_SOURCE_DIR}/src/browser_io.js"
+    "--shell-file ${PROJECT_SOURCE_DIR}/data/shell.html"
     "${em_embed_flags}"
 )
 

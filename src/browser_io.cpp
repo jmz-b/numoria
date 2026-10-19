@@ -4,8 +4,13 @@
 #ifdef __EMSCRIPTEN__
 
 #include "headers.h"
+#include "curses.h"
 
 extern "C" {
+    void browserForceRedraw() {
+        (void) wrefresh(curscr);
+    }
+
     void setSavePath(char *scores_path, char *save_path) {
         const_cast<std::string &>(config::files::scores) = scores_path;
         config::files::save_game = save_path;

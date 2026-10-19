@@ -60,9 +60,40 @@ Module.onRuntimeInitialized = function() {
 
             Module.callMain([]);
 
-            // Ensure the SDL2 canvas has keyboard focus so input reaches the game.
+            var loading = document.getElementById('loading');
+            if (loading) loading.remove();
+
             var canvas = document.getElementById('canvas');
             if (canvas) {
+                var lockedW = canvas.width;
+                var lockedH = canvas.height;
+                console.log('[numoria] canvas locked at ' + lockedW + 'x' + lockedH
+                    + ' viewport=' + window.innerWidth + 'x' + window.innerHeight);
+
+                function lockCanvas() {
+                    if (canvas.width !== lockedW)  canvas.width  = lockedW;
+                    if (canvas.height !== lockedH) canvas.height = lockedH;
+                    var scale = Math.min(window.innerWidth / lockedW, window.innerHeight / lockedH);
+                    var dispW = Math.round(lockedW * scale);
+                    var dispH = Math.round(lockedH * scale);
+                    var left  = Math.round((window.innerWidth  - dispW) / 2);
+                    var top   = Math.round((window.innerHeight - dispH) / 2);
+                    canvas.style.cssText = 'display:block; position:fixed;'
+                        + 'left:' + left + 'px; top:' + top + 'px;'
+                        + 'width:' + dispW + 'px; height:' + dispH + 'px;'
+                        + 'image-rendering:pixelated;';
+                }
+                lockCanvas();
+                window.addEventListener('resize', function() {
+                    lockCanvas();
+                    // Ctrl-R (0x12) triggers wrefresh in getKeyInput() without
+                    // calling wasm directly, which would interfere with ASYNCIFY.
+                    window._keyBuffer.push(0x12);
+                });
+                new MutationObserver(lockCanvas).observe(canvas, {
+                    attributes: true, attributeFilter: ['width', 'height']
+                });
+
                 canvas.focus();
                 canvas.addEventListener('click', function() { canvas.focus(); });
             }
